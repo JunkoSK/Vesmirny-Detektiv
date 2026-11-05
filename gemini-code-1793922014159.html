@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vesmírny Detektív – Ultimate Edition</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #030712;
+            color: #f3f4f6;
+            overflow-x: hidden;
+            user-select: none;
+        }
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+        ::-webkit-scrollbar { width: 4px; background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.3); border-radius: 4px; }
+        
+        @keyframes spaceDrift {
+            0% { background-position: 0 0; }
+            100% { background-position: 400px 800px; }
+        }
+        .refined-space {
+            background: linear-gradient(to bottom, #030712, #0f172a, #030712);
+            position: relative;
+        }
+        .refined-space::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(white 1px, transparent 0), radial-gradient(rgba(99,102,241,0.4) 1.5px, transparent 0);
+            background-size: 60px 60px, 120px 120px;
+            background-position: 0 0, 30px 30px;
+            animation: spaceDrift 90s linear infinite;
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-5px); } }
+        .animate-float { animation: float 4s ease-in-out infinite; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4 refined-space">
+
+    <!-- HLAVNÝ KONTAJNER -->
+    <div id="gameContainer" class="w-full max-w-4xl bg-slate-900/90 backdrop-blur-xl border border-indigo-500/30 rounded-3xl shadow-2xl p-4 sm:p-8 relative z-10 overflow-hidden flex flex-col min-h-[660px]">
+        
+        <!-- 1. HLAVNÉ MENU -->
+        <div id="screenMenu" class="relative z-10 flex flex-col items-center justify-center flex-1 my-auto text-center py-4">
+            
+            <!-- Profilová fotka s rámikom vedľa mena -->
+            <div class="flex items-center justify-center gap-3 mb-3">
+                <div id="menuAvatarBox" class="w-14 h-14 rounded-2xl bg-slate-950 flex items-center justify-center text-2xl border border-indigo-500/40">
+                    👨‍🚀
+                </div>
+                <div class="text-left">
+                    <p class="text-[10px] uppercase font-bold text-indigo-400 tracking-wider">Aktívny Agent</p>
+                    <h2 id="menuDisplayNickname" class="font-orbitron font-extrabold text-lg sm:text-xl text-white flex items-center gap-1.5">
+                        <span id="menuEffectLeft"></span>
+                        <span id="menuPlayerNameText">Detektív</span>
+                        <span id="menuEffectRight"></span>
+                    </h2>
+                </div>
+            </div>
+
+            <h1 class="font-orbitron text-2xl sm:text-4xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 mb-1">
+                VESMÍRNY DETEKTÍV
+            </h1>
+            <p class="text-slate-400 text-xs sm:text-sm max-w-md mb-3">
+                Vedomostná misia so 20 úspechmi, VIP obchodom a cloudovým úložiskom!
+            </p>
+
+            <!-- Autentifikácia cez Meno a Heslo -->
+            <div id="authSection" class="w-full max-w-sm mb-4 p-3 bg-slate-950/70 border border-indigo-500/30 rounded-2xl text-center">
+                <div id="loggedOutView">
+                    <p class="text-[11px] text-indigo-300 font-bold mb-2">Zadaj meno a heslo pre ukladanie v cloude:</p>
+                    <div class="space-y-2">
+                        <input type="text" id="authUsername" maxlength="15" placeholder="Tvoje meno (napr. SpaceHero)" 
+                            class="w-full px-3 py-2 bg-slate-900 border border-indigo-500/40 rounded-xl text-xs sm:text-sm text-white text-center font-bold">
+                        <input type="password" id="authPassword" placeholder="Heslo (min. 6 znakov)" 
+                            class="w-full px-3 py-2 bg-slate-900 border border-indigo-500/40 rounded-xl text-xs sm:text-sm text-white text-center font-bold">
+                    </div>
+                    <div class="flex gap-2 mt-2.5">
+                        <button onclick="registerWithUsername()" class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-indigo-300 font-bold text-xs rounded-xl cursor-pointer">Registrácia</button>
+                        <button onclick="loginWithUsername()" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl cursor-pointer">Prihlásiť</button>
+                    </div>
+                </div>
+                <div id="loggedInView" class="hidden flex items-center justify-between px-1">
+                    <span class="text-xs text-emerald-400 font-bold">Účet: <span id="userNicknameDisplay" class="text-white"></span></span>
+                    <button onclick="logoutUser()" class="px-3 py-1 bg-rose-900/50 hover:bg-rose-900 text-rose-200 text-xs font-bold rounded-xl cursor-pointer">Odhlásiť</button>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap justify-center gap-3 w-full max-w-md">
+                <button onclick="playSound('click'); goToGradeSelect()" class="flex-1 min-w-[140px] px-6 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 font-orbitron font-bold text-xs sm:text-sm tracking-wider rounded-2xl shadow-lg shadow-indigo-600/30 transition transform hover:scale-105 cursor-pointer">
+                    <i class="fa-solid fa-rocket mr-2"></i> ŠTART
+                </button>
+                <button onclick="playSound('click'); openShop()" class="px-5 py-3.5 bg-slate-800 hover:bg-slate-700 border border-indigo-500/30 font-orbitron font-bold text-xs sm:text-sm tracking-wider rounded-2xl transition cursor-pointer text-yellow-400">
+                    <i class="fa-solid fa-store mr-2"></i> OBCHOD
+                </button>
+                <button onclick="playSound('click'); openAchievements()" class="px-5 py-3.5 bg-slate-800 hover:bg-slate-700 border border-indigo-500/30 font-orbitron font-bold text-xs sm:text-sm tracking-wider rounded-2xl transition cursor-pointer text-emerald-400">
+                    <i class="fa-solid fa-award mr-2"></i> ÚSPECHY
+                </button>
+                <button onclick="playSound('click'); openLeaderboard()" class="px-5 py-3.5 bg-slate-800 hover:bg-slate-700 border border-indigo-500/30 font-orbitron font-bold text-xs sm:text-sm tracking-wider rounded-2xl transition cursor-pointer text-indigo-300">
+                    <i class="fa-solid fa-trophy mr-2"></i> REBRÍČEK
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. VÝBER STUPŇA ZŠ -->
+        <div id="screenGrade" class="relative z-10 flex flex-col flex-1 hidden py-4">
+            <div class="flex items-center justify-between mb-6">
+                <button onclick="playSound('click'); backToMenu()" class="text-xs font-bold text-slate-400 hover:text-white px-3 py-2 rounded-xl bg-slate-800/80"><i class="fa-solid fa-arrow-left mr-1"></i> Späť</button>
+                <h2 class="font-orbitron text-sm sm:text-xl font-bold text-indigo-300 text-center">VYBER STUPEŇ ZŠ</h2>
+                <div class="text-xs bg-indigo-950/80 border border-indigo-500/40 px-3 py-1.5 rounded-xl text-yellow-400 font-bold">
+                    <i class="fa-solid fa-coins mr-1"></i> <span id="playerCoins">20</span> kred.
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 my-auto max-w-xl mx-auto w-full">
+                <div onclick="playSound('click'); selectGrade(1)" class="p-6 rounded-3xl bg-slate-800/60 border-2 border-blue-500/40 hover:border-blue-400 hover:bg-blue-950/30 transition cursor-pointer text-center flex flex-col items-center justify-center">
+                    <div class="p-4 rounded-2xl bg-blue-600/20 text-blue-400 text-3xl sm:text-4xl mb-3"><i class="fa-solid fa-school"></i></div>
+                    <h3 class="font-orbitron text-base sm:text-lg font-bold text-blue-300 mb-1">1. STUPEŇ ZŠ</h3>
+                    <p class="text-xs text-slate-400">1. až 4. ročník ZŠ</p>
+                </div>
+                <div onclick="playSound('click'); selectGrade(2)" class="p-6 rounded-3xl bg-slate-800/60 border-2 border-purple-500/40 hover:border-purple-400 hover:bg-purple-950/30 transition cursor-pointer text-center flex flex-col items-center justify-center">
+                    <div class="p-4 rounded-2xl bg-purple-600/20 text-purple-400 text-3xl sm:text-4xl mb-3"><i class="fa-solid fa-graduation-cap"></i></div>
+                    <h3 class="font-orbitron text-base sm:text-lg font-bold text-purple-300 mb-1">2. STUPEŇ ZŠ</h3>
+                    <p class="text-xs text-slate-400">5. až 9. ročník ZŠ</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. VÝBER PREDMETU -->
+        <div id="screenSubject" class="relative z-10 flex flex-col flex-1 hidden py-4">
+            <div class="flex items-center justify-between mb-4">
+                <button onclick="playSound('click'); goToGradeSelect()" class="text-xs font-bold text-slate-400 hover:text-white px-3 py-2 rounded-xl bg-slate-800/80"><i class="fa-solid fa-arrow-left mr-1"></i> Stupeň</button>
+                <h2 class="font-orbitron text-xs sm:text-lg font-bold text-indigo-300" id="subjectHeaderTitle">SEKTOR PÁTRANIA</h2>
+                <div class="text-xs bg-indigo-950/80 border border-indigo-500/40 px-3 py-1.5 rounded-xl text-yellow-400 font-bold">
+                    <i class="fa-solid fa-coins mr-1"></i> <span id="playerCoins2">20</span> kred.
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 my-auto">
+                <div onclick="playSound('click'); selectSubject('matematika')" class="p-3.5 rounded-2xl bg-slate-800/60 border border-blue-500/30 hover:border-blue-400 hover:bg-blue-950/30 transition cursor-pointer flex items-center gap-3">
+                    <div class="p-2.5 rounded-xl bg-blue-600/20 text-blue-400 text-xl"><i class="fa-solid fa-calculator"></i></div>
+                    <div><h3 class="font-bold text-xs sm:text-sm text-blue-300">Matematika</h3><p class="text-[11px] text-slate-400">Počty a logika</p></div>
+                </div>
+                <div onclick="playSound('click'); selectSubject('prirodoveda')" class="p-3.5 rounded-2xl bg-slate-800/60 border border-emerald-500/30 hover:border-emerald-400 hover:bg-emerald-950/30 transition cursor-pointer flex items-center gap-3">
+                    <div class="p-2.5 rounded-xl bg-emerald-600/20 text-emerald-400 text-xl"><i class="fa-solid fa-leaf"></i></div>
+                    <div><h3 class="font-bold text-xs sm:text-sm text-emerald-300">Príroda & Bio</h3><p class="text-[11px] text-slate-400">Živočíchy a telo</p></div>
+                </div>
+                <div onclick="playSound('click'); selectSubject('vlastiveda')" class="p-3.5 rounded-2xl bg-slate-800/60 border border-amber-500/30 hover:border-amber-400 hover:bg-amber-950/30 transition cursor-pointer flex items-center gap-3">
+                    <div class="p-2.5 rounded-xl bg-amber-600/20 text-amber-400 text-xl"><i class="fa-solid fa-globe"></i></div>
+                    <div><h3 class="font-bold text-xs sm:text-sm text-amber-300">Vlastiveda & Zem</h3><p class="text-[11px] text-slate-400">Slovensko a svet</p></div>
+                </div>
+                <div onclick="playSound('click'); selectSubject('anglictina')" class="p-3.5 rounded-2xl bg-slate-800/60 border border-purple-500/30 hover:border-purple-400 hover:bg-purple-950/30 transition cursor-pointer flex items-center gap-3">
+                    <div class="p-2.5 rounded-xl bg-purple-600/20 text-purple-400 text-xl"><i class="fa-solid fa-language"></i></div>
+                    <div><h3 class="font-bold text-xs sm:text-sm text-purple-300">Anglický jazyk</h3><p class="text-[11px] text-slate-400">Slovíčka a frázy</p></div>
+                </div>
+                <div onclick="playSound('click'); selectSubject('informatika')" class="p-3.5 rounded-2xl bg-slate-800/60 border border-cyan-500/30 hover:border-cyan-400 hover:bg-cyan-950/30 transition cursor-pointer flex items-center gap-3">
+                    <div class="p-2.5 rounded-xl bg-cyan-600/20 text-cyan-400 text-xl"><i class="fa-solid fa-laptop-code"></i></div>
+                    <div><h3 class="font-bold text-xs sm:text-sm text-cyan-300">Informatika</h3><p class="text-[11px] text-slate-400">PC a algoritmy</p></div>
+                </div>
+                <div onclick="playSound('click'); selectSubject('fyzika')" class="p-3.5 rounded-2xl bg-slate-800/60 border border-rose-500/30 hover:border-rose-400 hover:bg-rose-950/30 transition cursor-pointer flex items-center gap-3">
+                    <div class="p-2.5 rounded-xl bg-rose-600/20 text-rose-400 text-xl"><i class="fa-solid fa-atom"></i></div>
+                    <div><h3 class="font-bold text-xs sm:text-sm text-rose-300">Fyzika & Vesmír</h3><p class="text-[11px] text-slate-400">Energia a planéty</p></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. HERNÁ OBRAZOVKA (TAJNÉ NÁPOVEDY) -->
+        <div id="screenGame" class="relative z-10 flex flex-col flex-1 hidden py-2">
+            <div class="flex items-center justify-between bg-slate-800/50 border border-indigo-500/30 p-3 rounded-2xl mb-3 text-xs sm:text-sm">
+                <div class="flex items-center gap-3">
+                    <span class="font-bold text-indigo-300"><i class="fa-solid fa-shield-halved mr-1"></i> <span id="currentSubjectTitle">Predmet</span></span>
+                    <span class="bg-indigo-950 px-2.5 py-1 rounded-xl text-slate-300 border border-indigo-500/30 font-bold">Otázka <span id="questionIndex">1</span>/10</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="text-yellow-400 font-extrabold"><i class="fa-solid fa-star mr-1"></i> <span id="currentScore">0</span> b.</span>
+                    <span class="text-red-400 font-extrabold"><i class="fa-solid fa-heart mr-1"></i> <span id="playerLives">3</span></span>
+                </div>
+            </div>
+
+            <!-- Skryté nápovedy -->
+            <div class="bg-slate-950/70 border border-indigo-500/30 p-3 rounded-2xl mb-3">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-indigo-400 mb-1 flex items-center justify-between">
+                    <span><i class="fa-solid fa-lightbulb mr-1 text-yellow-400"></i> Detektívna stopa</span>
+                    <span id="hintCounter" class="text-slate-400 text-[10px]">Stopy skryté</span>
+                </div>
+                <p id="hintText" class="text-xs sm:text-sm text-slate-400 italic min-h-[30px] flex items-center">🔒 Žiadna stopa nie je odhalená. Klikni nižšie pre odomknutie.</p>
+                <div class="mt-2 flex justify-end">
+                    <button onclick="playSound('click'); revealNextHint()" id="nextHintBtn" class="text-xs px-3 py-1 bg-indigo-900/60 hover:bg-indigo-800 border border-indigo-500/40 rounded-xl font-bold transition cursor-pointer text-indigo-200">
+                        Odomknúť stopu 1 (-5 b.)
+                    </button>
+                </div>
+            </div>
+
+            <div class="mb-3 px-2">
+                <h3 id="questionText" class="text-sm sm:text-base font-bold text-white text-center leading-relaxed">Otázka sa načítava...</h3>
+            </div>
+
+            <div id="answersGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-auto mb-1"></div>
+        </div>
+
+        <!-- 5. OBRAZOVKA VÝSLEDKOV -->
+        <div id="screenResult" class="relative z-10 flex flex-col items-center justify-center flex-1 hidden py-6 text-center">
+            <div id="resultIcon" class="mb-3 text-5xl text-yellow-400 animate-float">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h2 id="resultTitle" class="font-orbitron text-xl sm:text-2xl font-black text-white mb-1">MISIA DOKONČENÁ!</h2>
+            <p id="resultDesc" class="text-slate-300 text-xs sm:text-sm max-w-md mb-4">Skóre a kredity boli úspešne pripísané na tvoj účet.</p>
+
+            <div class="bg-slate-950/80 border border-indigo-500/40 p-4 sm:p-5 rounded-3xl w-full max-w-sm mb-5 space-y-2.5">
+                <div class="flex justify-between text-xs sm:text-sm">
+                    <span class="text-slate-400">Získané body / kredity:</span>
+                    <span id="resScore" class="font-extrabold text-yellow-400">0 b.</span>
+                </div>
+                <div id="resAchNotice" class="text-xs text-indigo-300 italic pt-2 border-t border-indigo-500/20 hidden">
+                    ✨ Získané bonusy za úspechy pripočítané!
+                </div>
+            </div>
+
+            <div class="flex flex-wrap justify-center gap-3">
+                <button onclick="playSound('click'); backToMenu()" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 font-orbitron font-bold text-xs rounded-xl transition cursor-pointer">
+                    <i class="fa-solid fa-house mr-1"></i> HLAVNÉ MENU
+                </button>
+                <button onclick="playSound('click'); openLeaderboard()" class="px-6 py-3 bg-slate-800 hover:bg-slate-700 border border-indigo-500/30 font-orbitron font-bold text-xs rounded-xl transition cursor-pointer text-indigo-300">
+                    <i class="fa-solid fa-trophy mr-1"></i> REBRÍČEK
+                </button>
+            </div>
+        </div>
+
+        <!-- 6. VIP OBCHOD -->
+        <div id="screenShop" class="relative z-10 flex flex-col flex-1 hidden py-4">
+            <div class="flex items-center justify-between mb-3">
+                <button onclick="playSound('click'); backToMenu()" class="text-xs font-bold text-slate-400 hover:text-white px-3 py-2 rounded-xl bg-slate-800/80"><i class="fa-solid fa-arrow-left mr-1"></i> Späť</button>
+                <h2 class="font-orbitron text-sm sm:text-xl font-bold text-yellow-400"><i class="fa-solid fa-store mr-2"></i> VIP OBCHOD</h2>
+                <div class="text-xs bg-indigo-950/80 border border-indigo-500/40 px-3 py-1.5 rounded-xl text-yellow-400 font-bold">
+                    <i class="fa-solid fa-coins mr-1"></i> <span id="shopCoins">20</span> kred.
+                </div>
+            </div>
+
+            <div class="flex justify-center gap-1.5 mb-3 overflow-x-auto py-1">
+                <button onclick="playSound('click'); switchShopTab('frames')" id="tabFramesBtn" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-indigo-600 text-white cursor-pointer transition">Rámiky</button>
+                <button onclick="playSound('click'); switchShopTab('avatars')" id="tabAvatarsBtn" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-800 text-slate-400 cursor-pointer transition">Avatary</button>
+                <button onclick="playSound('click'); switchShopTab('effects')" id="tabEffectsBtn" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-800 text-slate-400 cursor-pointer transition">Efekty</button>
+            </div>
+
+            <div class="space-y-2.5 my-auto overflow-y-auto max-h-[320px] p-1" id="shopItemsContainer"></div>
+        </div>
+
+        <!-- 7. ÚSPECHY (20 RÔZNYCH A NÁROČNÝCH ÚSPECHOV) -->
+        <div id="screenAchievements" class="relative z-10 flex flex-col flex-1 hidden py-4">
+            <div class="flex items-center justify-between mb-3">
+                <button onclick="playSound('click'); backToMenu()" class="text-xs font-bold text-slate-400 hover:text-white px-3 py-2 rounded-xl bg-slate-800/80"><i class="fa-solid fa-arrow-left mr-1"></i> Späť</button>
+                <h2 class="font-orbitron text-sm sm:text-xl font-bold text-emerald-400"><i class="fa-solid fa-award mr-2"></i> ÚSPECHY (20)</h2>
+                <div class="text-xs bg-indigo-950/80 border border-indigo-500/40 px-3 py-1.5 rounded-xl text-yellow-400 font-bold">
+                    Splnené: <span id="achCount">0</span>/20
+                </div>
+            </div>
+
+            <div class="space-y-2 my-auto overflow-y-auto max-h-[360px] p-1" id="achievementsList"></div>
+        </div>
+
+        <!-- 8. REBRÍČEK -->
+        <div id="screenLeaderboard" class="relative z-10 flex flex-col flex-1 hidden py-4">
+            <div class="flex items-center justify-between mb-3">
+                <button onclick="playSound('click'); backToMenu()" class="text-xs font-bold text-slate-400 hover:text-white px-3 py-2 rounded-xl bg-slate-800/80"><i class="fa-solid fa-arrow-left mr-1"></i> Späť</button>
+                <h2 class="font-orbitron text-sm sm:text-xl font-bold text-indigo-300"><i class="fa-solid fa-trophy mr-2 text-yellow-400"></i> REBRÍČEK</h2>
+                <button onclick="playSound('click'); nacitajOnlineRebricek()" class="text-xs px-3 py-1.5 bg-indigo-900/60 hover:bg-indigo-800 border border-indigo-500/40 rounded-xl font-bold text-indigo-200"><i class="fa-solid fa-rotate"></i></button>
+            </div>
+
+            <div id="leaderboardList" class="space-y-2 my-auto overflow-y-auto max-h-[360px] p-1">
+                <div class="text-center text-xs text-slate-400 py-8">Načítavam online rebríček z cloudu...</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- AUDIO A JS LOGIKA -->
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            try {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'click') {
+                    osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
+                    osc.start(); osc.stop(audioCtx.currentTime + 0.06);
+                } else if (type === 'correct') {
+                    osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.08);
+                    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+                    osc.start(); osc.stop(audioCtx.currentTime + 0.25);
+                } else if (type === 'wrong') {
+                    osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(100, audioCtx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+                    osc.start(); osc.stop(audioCtx.currentTime + 0.25);
+                } else if (type === 'buy') {
+                    osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.08);
+                    osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.16);
+                    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+                    osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+                }
+            } catch (e) {
+                console.log("Audio skipped");
+            }
+        }
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIz0ms4s0V0qOLeJN4fuXmtYC74XY1pMY",
+            authDomain: "vesmirny-detektiv.firebaseapp.com",
+            projectId: "vesmirny-detektiv",
+            storageBucket: "vesmirny-detektiv.firebasestorage.app",
+            messagingSenderId: "365081393279",
+            appId: "1:365081393279:web:9304ff4a9981a220a5674a"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // Rámiky (vyvážená ekonomika)
+        const FRAMES_DATABASE = [
+            { id: 'f_none', name: 'Základný okraj', price: 0, style: 'border border-indigo-500/40 text-indigo-400' },
+            { id: 'f_bronze', name: 'Bronzový rámik', price: 120, style: 'border-2 border-amber-700 text-amber-600 shadow-[0_0_12px_rgba(180,83,9,0.3)]' },
+            { id: 'f_silver', name: 'Strieborný rámik', price: 250, style: 'border-2 border-slate-300 text-slate-200 shadow-[0_0_12px_rgba(203,213,225,0.3)]' },
+            { id: 'f_gold', name: 'Zlatý rámik', price: 450, style: 'border-2 border-yellow-400 text-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.4)]' },
+            { id: 'f_emerald', name: 'Smaragdový žiarič', price: 700, style: 'border-2 border-emerald-400 text-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.4)]' },
+            { id: 'f_ruby', name: 'Rubínový plameň', price: 1000, style: 'border-2 border-rose-500 text-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.4)]' },
+            { id: 'f_neon', name: 'Neónový fialový', price: 1400, style: 'border-2 border-purple-500 text-purple-400 shadow-[0_0_18px_rgba(168,85,247,0.5)]' },
+            { id: 'f_cyber', name: 'Kybernetický azúrový', price: 1800, style: 'border-2 border-cyan-400 text-cyan-300 shadow-[0_0_18px_rgba(34,211,238,0.5)]' },
+            { id: 'f_plasma', name: 'Plazmový žiarič', price: 2300, style: 'border-2 border-indigo-400 text-indigo-300 shadow-[0_0_20px_rgba(99,102,241,0.6)]' },
+            { id: 'f_rainbow', name: 'Galaktický dúhový', price: 3000, style: 'border-2 border-pink-500 text-pink-400 shadow-[0_0_22px_rgba(236,72,153,0.6)]' }
+        ];
+
+        // Avatary
+        const AVATARS_DATABASE = [
+            { id: 'a_astronaut', name: 'Kozmonaut', price: 0, val: '👨‍🚀' },
+            { id: 'a_alien', name: 'Mimozemšťan 👽', price: 100, val: '👽' },
+            { id: 'a_fox', name: 'Bystrá Líška 🦊', price: 180, val: '🦊' },
+            { id: 'a_robot', name: 'Vesmírny Robot 🤖', price: 280, val: '🤖' },
+            { id: 'a_lion', name: 'Kráľ Lev 🦁', price: 400, val: '🦁' },
+            { id: 'a_tiger', name: 'Hviezdny Tiger 🐯', price: 550, val: '🐯' },
+            { id: 'a_unicorn', name: 'Mýtický Jednorožec 🦄', price: 750, val: '🦄' },
+            { id: 'a_dragon', name: 'Vesmírny Drak 🐲', price: 1000, val: '🐲' },
+            { id: 'a_wizard', name: 'Kozmický Čarodej 🧙‍♂️', price: 1350, val: '🧙‍♂️' },
+            { id: 'a_king', name: 'Galaktický Imperátor 👑', price: 1800, val: '👑' }
+        ];
+
+        // Efekty okolo mena
+        const EFFECTS_DATABASE = [
+            { id: 'e_none', name: 'Bez efektu', price: 0, icon: '' },
+            { id: 'e_stars', name: '✨ Viac hviezdičiek', price: 500, icon: '✨' },
+            { id: 'e_fire', name: '🔥 Ohnivé plamene', price: 900, icon: '🔥' },
+            { id: 'e_dragon', name: '🐲 Malý Drak', price: 1500, icon: '🐲' },
+            { id: 'e_crown', name: '👑 Zlatá koruna', price: 2200, icon: '👑' },
+            { id: 'e_galaxy', name: '🌌 Galaktická žiara', price: 3200, icon: '🌌' }
+        ];
+
+        let state = {
+            userId: null,
+            userName: "Detektív",
+            coins: parseInt(localStorage.getItem('vd_coins') || '20'),
+            score: 0,
+            lives: 3,
+            selectedGrade: 1,
+            currentSubject: '',
+            questionsList: [],
+            currentIndex: 0,
+            currentHintsLevel: 0,
+            selectedFrameId: localStorage.getItem('vd_frameId') || 'f_none',
+            selectedAvatarVal: localStorage.getItem('vd_avatarVal') || '👨‍🚀',
+            selectedEffectId: localStorage.getItem('vd_effectId') || 'e_none',
+            unlockedFrames: JSON.parse(localStorage.getItem('vd_unlockedFrames') || '["f_none"]'),
+            unlockedAvatars: JSON.parse(localStorage.getItem('vd_unlockedAvatars') || '["a_astronaut"]'),
+            unlockedEffects: JSON.parse(localStorage.getItem('vd_unlockedEffects') || '["e_none"]'),
+            achievements: JSON.parse(localStorage.getItem('vd_ach') || '{}'),
+            missionsCompleted: parseInt(localStorage.getItem('vd_missions') || '0')
+        };
+
+        const SUBJECTS_DATABASE = {
+            1: {
+                matematika: [
+                    { q: "Koľko je 5 + 3?", h: ["Ide o sčítanie dvoch malých čísel.", "Výsledok je o 2 menší ako 10."], a: ["8", "7", "9", "6"], correct: 0 },
+                    { q: "Koľko je 10 mínus 4?", h: ["Počítame opačne ako sčítanie.", "Zostane ti číslo väčšie ako 5."], a: ["6", "5", "7", "4"], correct: 0 },
+                    { q: "Aký tvar má futbalová lopta?", h: ["Nie je to plochý obrazec.", "Tvar má rovnaký ako planéta Zem."], a: ["Guľa", "Kocka", "Valec", "Ihlan"], correct: 0 },
+                    { q: "Koľko dní má jeden týždeň?", h: ["Začína pondelkom a končí v nedeľu.", "Je to viac ako 5 a menej ako 10."], a: ["7", "5", "6", "10"], correct: 0 },
+                    { q: "Koľko je 3 krát 3?", h: ["Je to trojnásobok čísla 3.", "Výsledok je rovnaký ako 9."], a: ["9", "6", "12", "8"], correct: 0 },
+                    { q: "Koľko je 12 deleno 2?", h: ["Polovica z dvanástky.", "Hľadáme číslo, ktoré 2-krát dá 12."], a: ["6", "4", "8", "5"], correct: 0 },
+                    { q: "Aké číslo nasleduje po čísle 19?", h: ["Dvojciferné okrúhle číslo.", "Predchádza desiatke s dvojkou na začiatku."], a: ["20", "18", "21", "30"], correct: 0 },
+                    { q: "Máš 10 cukríkov a zješ 3. Koľko zostane?", h: ["Musíš odčítať 3 od desiatky.", "Zostane sedem."], a: ["7", "6", "8", "5"], correct: 0 },
+                    { q: "Koľko ročných období máme v roku?", h: ["Jar, leto, jeseň a...", "Sú to štyri obdobia."], a: ["4", "2", "3", "12"], correct: 0 },
+                    { q: "Koľko minút má jedna hodina?", h: ["Je to šesťdesiat.", "Rovnako ako sekúnd v jednej minúte."], a: ["60 minút", "30 minút", "100 minút", "24 minút"], correct: 0 }
+                ],
+                prirodoveda: [
+                    { q: "Aké zviera dáva mlieko a bučí na lúke?", h: ["Je to veľké hospodárske zviera.", "Má štyri nohy a rohy."], a: ["Krava", "Pes", "Mačka", "Kura"], correct: 0 },
+                    { q: "Ktorá z týchto rastlín je strom?", h: ["Má tvrdý kmeň a korunu z konárov.", "Rastie v lese dlhé roky."], a: ["Dub", "Púpava", "Tráva", "Ruža"], correct: 0 },
+                    { q: "Koľko nôh má pes?", h: ["Je to verný domáci miláčik.", "Počítaj končatiny na štyroch."], a: ["4", "2", "6", "8"], correct: 0 },
+                    { q: "Ktorý mesiac začína nový rok?", h: ["Je to úplne prvý mesiac v kalendári.", "Vtedy býva zima a často aj sneh."], a: ["Január", "December", "Marec", "Jún"], correct: 0 },
+                    { q: "Z čoho pije včela nektár?", h: ["Nachádza sa to na lúkach v lete.", "Má to pestré lupene a peknú vôňu."], a: ["Z kvetov", "Zo stromov", "Z kameňov", "Z vody"], correct: 0 },
+                    { q: "Ktoré zviera je známe tým, že skáče a nosí mláďa vo vaku?", h: ["Žije v ďalekej Austrálii.", "Začína na písmeno K."], a: ["Klokan", "Slon", "Medveď", "Vlk"], correct: 0 },
+                    { q: "Aké skupenstvo má voda, keď zmrzne?", h: ["Už netečie, je tvrdá.", "Dávame si ju do nápojov v lete."], a: ["Pevné (ľad)", "Kvapalné", "Plynné", "Para"], correct: 0 },
+                    { q: "Ktorý orgán v našom tele slúži na dýchanie?", h: ["Máme dva a sú v hrudnom koši.", "Prúdi do nich čerstvý vzduch."], a: ["Pľúca", "Srdce", "Žalúdok", "Pečeň"], correct: 0 },
+                    { q: "Ktoré domáce zviera mňauká a chytá myši?", h: ["Je veľmi nezávislé a má jemnú srsť.", "Často sa mazná s ľuďmi."], a: ["Mačka", "Pes", "Škrečok", "Papagáj"], correct: 0 },
+                    { q: "Koľko očí má človek?", h: ["Máme ich na tvári vedľa nosa.", "Slúžia nám na pozeranie."], a: ["2", "1", "3", "4"], correct: 0 }
+                ],
+                vlastiveda: [
+                    { q: "Aké je hlavné mesto Slovenska?", h: ["Leží na rieke Dunaj.", "Je to naše najväčšie mesto."], a: ["Bratislava", "Košice", "Nitra", "Žilina"], correct: 0 },
+                    { q: "Akú farbu má prvý pruh na slovenskej vlajke zhora?", h: ["Je to farba snehovej vločky.", "Je prvá v poradí."], a: ["Biela", "Modrá", "Červená", "Zelená"], correct: 0 },
+                    { q: "Kto vedie náš štát (Slovensko)?", h: ["Je to najvyššia hlava štátu.", "Môže to byť pán alebo pani."], a: ["Prezident(ka)", "Kráľ", "Riaditeľ", "Učiteľ"], correct: 0 },
+                    { q: "Kde žijeme na planéte?", h: ["Voláme ju aj Modrá planéta.", "Je tretia v slnečnej sústave."], a: ["Zem", "Mesiac", "Mars", "Slnko"], correct: 0 },
+                    { q: "Aká rieka preteká hlavným mestom?", h: ["Je to naša najznámejšia a najväčšia rieka.", "Tečie aj cez Viedeň či Budapešť."], a: ["Dunaj", "Váh", "Hron", "Nitra"], correct: 0 },
+                    { q: "Aké pohorie je najvyššie na Slovensku?", h: ["Nachádzajú sa tu štíty ako Gerlach.", "Majú vysokohorský ráz."], a: ["Vysoké Tatry", "Nízke Tatry", "Matúšovo", "Malá Fatra"], correct: 0 },
+                    { q: "Ktorý štát susedí so Slovenskom na severe?", h: ["Naši severní susedia.", "Hlavné mesto je Varšava."], a: ["Poľsko", "Rakúsko", "Maďarsko", "Ukrajina"], correct: 0 },
+                    { q: "Akú menu používa Slovensko?", h: ["Platíme ňou v obchodoch.", "Sú to mince a bankovky s eurom."], a: ["Euro (€)", "Koruna (Kč)", "Dolár ($)", "Forint"], correct: 0 },
+                    { q: "V ktorej krajine leží naše hlavné mesto Bratislava?", h: ["V našej rodnej vlasti.", "Má tvar pripomínajúci mostík."], a: ["Slovensko", "Česko", "Rakúsko", "Poľsko"], correct: 0 },
+                    { q: "Aký symbol sa nachádza v strede slovenskej vlajky?", h: ["Je to náš štátny symbol.", "Obsahuje dvojkríž na trojvrší."], a: ["Štátny znak", "Hviezda", "Slnko", "Lvi"], correct: 0 }
+                ],
+                anglictina: [
+                    { q: "Ako sa povie po anglicky 'Mačka'?", h: ["Je to malé prítulné zviera.", "Začína na písmeno C."], a: ["Cat", "Dog", "Bird", "Cow"], correct: 0 },
+                    { q: "Prelož slovo 'Red':", h: ["Farba jahôd alebo srdiečka.", "Je to teplá farba."], a: ["Červená", "Modrá", "Zelená", "Žltá"], correct: 0 },
+                    { q: "Ako povieme po anglicky 'Ahoj'?", h: ["Priateľský pozdrav pri stretnutí.", "Podobne ako Hello."], a: ["Hello", "Goodbye", "Please", "Thanks"], correct: 0 },
+                    { q: "Prelož číslo 'One':", h: ["Prvá základná číslica.", "Zodpovedá jednotke."], a: ["1", "2", "3", "10"], correct: 0 },
+                    { q: "Ako sa povie 'Mama' po anglicky?", h: ["Člen rodiny, ktorý sa o nás stará.", "Začína na M."], a: ["Mom", "Dad", "Sister", "Brother"], correct: 0 },
+                    { q: "Ako preložíme slovíčko 'Sun'?", h: ["Svieti nám na oblohe cez deň.", "Dáva nám svetlo a teplo."], a: ["Slnko", "Mesiac", "Hviezdna obloha", "Oblak"], correct: 0 },
+                    { q: "Ako povieme po anglicky 'Jablko'?", h: ["Zdravé ovocie zo sadu.", "Začína na písmeno A."], a: ["Apple", "Banana", "Orange", "Pear"], correct: 0 },
+                    { q: "Prelož slovo 'Blue':", h: ["Farba letnej oblohy.", "Modrý odtieň."], a: ["Modrá", "Červená", "Žltá", "Zelená"], correct: 0 },
+                    { q: "Ako povieme po anglicky 'Kniha'?", h: ["Listujeme v nej a čítame príbehy.", "Nosíme ju v školskej taške."], a: ["Book", "Pen", "Table", "School"], correct: 0 },
+                    { q: "Aký je preklad slova 'Water'?", h: ["Nevyhnutná tekutina na pitie.", "Tečie z vodovodu."], a: ["Voda", "Mlieko", "Čaj", "Polievka"], correct: 0 }
+                ],
+                informatika: [
+                    { q: "Čo držíš v ruke na stole pri ovládaní kurzora?", h: ["Má tvar hlodavca (podľa mena).", "Klikáme ňou na ikony."], a: ["Myš", "Klávesnica", "Monitor", "Tlačiareň"], correct: 0 },
+                    { q: "Na čo slúži obrazovka (monitor)?", h: ["Zobrazuje nám grafiku a text.", "Pozeráme sa do nej pri práci."], a: ["Na zobrazovanie obrazu", "Na písanie", "Na tlačenie", "Na zvuk"], correct: 0 },
+                    { q: "Je tablet dotykové zariadenie?", h: ["Ovládame ho priamo prstami.", "Nemá klasickú myš."], a: ["Áno", "Nie", "Len klávesnicou", "Je to rádio"], correct: 0 },
+                    { q: "Čo zapneme, keď chceme pracovať s počítačom?", h: ["Hlavný spínač napájania.", "Tlačidlo Power."], a: ["Zapnúť PC", "Vypnúť", "Skener", "Tlačiareň"], correct: 0 },
+                    { q: "Slúži klávesnica na písanie písmen?", h: ["Obsahuje veľa tlačidiel s abecedou.", "Píšeme ňou texty."], a: ["Áno", "Nie", "Iba na čísla", "Na zvuky"], correct: 0 },
+                    { q: "Ktoré zariadenie slúži na tlačenie dokumentov na papier?", h: ["Prenáša digitálny text do reálnej podoby.", "Používa atrament alebo toner."], a: ["Tlačiareň", "Myš", "Slúchadlá", "Mikrofón"], correct: 0 },
+                    { q: "Aké zariadenie slúži na prehrávanie zvuku z počítača?", h: ["Počúvame cez ne hudbu.", "Dávame si ich k ušiam alebo na stôl."], a: ["Reproduktory", "Monitor", "Klávesnica", "Myš"], correct: 0 },
+                    { q: "Pomáha internet pri vyhľadávaní informácií?", h: ["Je to obrovská globálna sieť.", "Nájdeme tam odpovede na všetko."], a: ["Áno", "Nie", "Nikdy", "Len v noci"], correct: 0 },
+                    { q: "Čo je to smartphone?", h: ["Prenosné zariadenie vo vrecku.", "Telefonujeme a surfujeme s ním."], a: ["Mobilný telefón", "Televízor", "Chladnička", "Kniha"], correct: 0 },
+                    { q: "Môže počítač pracovať bez elektriny?", h: ["Potrebuje prúd zo zásuvky alebo batériu.", "Bez energie sa nespustí."], a: ["Nie", "Áno", "Iba v lete", "Vždy"], correct: 0 }
+                ],
+                fyzika: [
+                    { q: "Prečo veci padajú na zem?", h: ["Pritahuje nás planéta.", "Túto silu objavil Isaac Newton."], a: ["Gravitácia", "Vietor", "Slnko", "Dym"], correct: 0 },
+                    { q: "Aké skupenstvo má kocka ľadu?", h: ["Nie je to voda ani para.", "Je to zmrznutá pevná látka."], a: ["Pevné", "Kvapalné", "Plynné", "Neznáme"], correct: 0 },
+                    { q: "Čo nás cez deň hreje a svieti na oblohe?", h: ["Je to obrovská hviezda v centre sústavy.", "Dáva život na Zemi."], a: ["Slnko", "Mesiac", "Blesk", "Lampa"], correct: 0 },
+                    { q: "Aká voda je v mrazničke?", h: ["Je premenená na ľad.", "Nezostáva v kvapalnom stave."], a: ["Ľad (Pevná)", "Voda", "Para", "Malinovka"], correct: 0 },
+                    { q: "Čo spôsobuje hrom pri búrke?", h: ["Je to zvukový sprievod blesku.", "Vzniká silným výbojom v atmosfére."], a: ["Elektrický výboj / Zvuk", "Vietor", "Sneh", "Dážď"], correct: 0 },
+                    { q: "Ktoré teleso obieha okolo našej Zemin?", h: ["Je to náš prirodzený satelit.", "Vidíme ho v noci v rôznych fázach."], a: ["Mesiac", "Slnko", "Mars", "Venuša"], correct: 0 },
+                    { q: "Aké svetlo dostávame zo Slnka?", h: ["Dáva nám jas a teplo.", "Bez neho by bola tma a chlad."], a: ["Svetlo a teplo", "Chlad a tmu", "Zvuk", "Vodu"], correct: 0 },
+                    { q: "Čo sa stane s cukrom v horúcom čaji?", h: ["Úplne sa v ňom stratí.", "Tekutina zostane sladká."], a: ["Rozpustí sa", "Zostane v celku", "Zhorí", "Zarastie"], correct: 0 },
+                    { q: "Aký pohyb robí loptička, keď ju pustíš z ruky?", h: ["Pritiahne ju zem.", "Nepadá hore, ale..."], a: ["Padá nadol", "Letí do vesmíru", "Stojí vo vzduchu", "Otáča sa do bokov"], correct: 0 },
+                    { q: "Čo cítime, keď fúka silný vietor?", h: ["Pohybujúci sa vzduch.", "Chladiaci vánok na tvári."], a: ["Prúdenie vzduchu", "Teplo", "Tmu", "Zvuk gitary"], correct: 0 }
+                ]
+            },
+            2: {
+                matematika: [
+                    { q: "Koľko je 15 x 4?", h: ["Vynásob 10 x 4 a pripočítaj 5 x 4.", "Výsledok je šesťdesiat."], a: ["60", "45", "50", "55"], correct: 0 },
+                    { q: "Aký je obsah štvorca so stranou 7 cm?", h: ["Počítame ako strana krát strana.", "Sedemkrát sedem."], a: ["49 cm²", "28 cm²", "14 cm²", "21 cm²"], correct: 0 },
+                    { q: "Rieš rovnicu: 2x + 4 = 12. Koľko je x?", h: ["Najskôr odčítaj 4 od dvanástky.", "Dva krát koľko je osem?"], a: ["4", "2", "6", "8"], correct: 0 },
+                    { q: "Koľko stupňov má súčet vnútorných uhlov v trojuholníku?", h: ["Je to dvojnásobok pravého uhla.", "Polovica plného kruhu (360)."], a: ["180°", "360°", "90°", "270°"], correct: 0 },
+                    { q: "Aká je druhej mocnina čísla 15?", h: ["Vynásob 15 x 15.", "Výsledok je o niečo viac ako dvesto."], a: ["225", "215", "250", "200"], correct: 0 },
+                    { q: "Aký je objem kocky s hranou 3 cm?", h: ["Vzorec je a krát a krát a.", "Tri krát tri krát tri."], a: ["27 cm³", "9 cm³", "18 cm³", "12 cm³"], correct: 0 },
+                    { q: "Koľko je 2 na tretiu (2³)?", h: ["2 krát 2 krát 2.", "Výsledok je menší ako 10."], a: ["8", "6", "9", "4"], correct: 0 },
+                    { q: "Aká je odmocnina z čísla 144?", h: ["Hľadáme číslo, ktoré vynásobené samým sebou dá 144.", "Je to dvanásť."], a: ["12", "14", "11", "13"], correct: 0 },
+                    { q: "Vypočítaj: 45 + 15 / 3", h: ["Prednosť má delenie pred sčítaním.", "Najskôr vydel 15 deleno 3."], a: ["50", "20", "48", "60"], correct: 0 },
+                    { q: "Koľko percent je jedna štvrtina (1/4)?", h: ["Celok je 100 percent.", "Vydel sto štyrmi."], a: ["25 %", "20 %", "50 %", "75 %"], correct: 0 }
+                ],
+                prirodoveda: [
+                    { q: "Ktorá krvná skupina je všeobecný darca?", h: ["Je to typ nula mínus.", "Môže darovať krv takmer každému."], a: ["0 neg. (0-)", "AB poz.", "A poz.", "B neg."], correct: 0 },
+                    { q: "Ako sa volá zelené farbivo v rastlinách?", h: ["Umožňuje rastlinám zachytávať slnečnú energiu.", "Obsahuje grécky koreň pre zeleň."], a: ["Chlorofyl", "Hemoglobín", "Karbón", "Glukóza"], correct: 0 },
+                    { q: "Ktorý plyn rastliny produkujú pri fotosyntéze?", h: ["Tento plyn potrebujú ľudia na dýchanie.", "Označuje sa značkou O2."], a: ["Kyslík", "Oxid uhličitý", "Dusík", "Metán"], correct: 0 },
+                    { q: "Koľko komôr má ľudské srdce?", h: ["Skladá sa z dvoch predsiení a dvoch komôr.", "Číslo štyri."], a: ["4", "2", "3", "1"], correct: 0 },
+                    { q: "Ktorá baktéria spôsobuje kvasenie mlieka na jogurt?", h: ["Sú to prospešné mliečne baktérie.", "Názov pripomína mlieko (lakto)."], a: ["Laktobacily", "Salmonella", "E. Coli", "Kvasinky"], correct: 0 },
+                    { q: "Ktorý ľudský orgán čistí krv a odbúruje toxíny?", h: ["Je to najväčšia žľaza v tele.", "Nachádza sa v pravej časti pod rebrami."], a: ["Pečeň", "Srdce", "Žalúdok", "Pľúca"], correct: 0 },
+                    { q: "Aká je základná stavebná jednotka všetkých živých organizmov?", h: ["Je mikroskopicky malá.", "Všetky tkanivá sa z nej skladajú."], a: ["Bunka", "Atóm", "Molekula", "Tkanivo"], correct: 0 },
+                    { q: "Ktorá kosť v ľudskom tele je najdlhšia a najpevnejšia?", h: ["Nachádza sa v dolnej končatine (v stehne).", "Unáša celú váhu tela."], a: ["Stehnová kosť", "Ramenná kosť", "Lebka", "Kľúčna kosť"], correct: 0 },
+                    { q: "Ktorý vitamín získava naše telo najmä zo slnečného žiarenia?", h: ["Hovoríme mu aj slnečný vitamín.", "Písmeno abecedy po C."], a: ["Vitamín D", "Vitamín C", "Vitamín A", "Vitamín B"], correct: 0 },
+                    { q: "Ako sa nazýva veda, ktorá skúma živé organizmy a prírodu?", h: ["Skúma život vo všetkých formách.", "Pochádza z gréckych slov bios a logos."], a: ["Biológia", "Fyzika", "Zemepis", "Matematika"], correct: 0 }
+                ],
+                vlastiveda: [
+                    { q: "Kedy vznikla Slovenská republika (samostatný štát)?", h: ["Stalo sa to hneď v prvý deň roka.", "Bol to rok 1993."], a: ["1. január 1993", "28. október 1918", "14. marec 1939", "1. máj 2004"], correct: 0 },
+                    { q: "Ktorý panovník viedol Veľkú Moravu v čase jej najväčšej slávy?", h: ["Za jeho vlády k nám prišli Cyril a Metod.", "Jeho meno sa začína na S."], a: ["Svätopluk", "Pribina", "Samo", "Kozel"], correct: 0 },
+                    { q: "Aké hory sú najvyššie na Slovensku?", h: ["Majú vysokohorský charakter a patria do Karpát.", "Leží v nich Gerlachovský štít."], a: ["Vysoké Tatry", "Nízke Tatry", "Malá Fatra", "Slovenský rudohorie"], correct: 0 },
+                    { q: "Ktorá rieka tvorí južnú hranicu Slovenska s Maďarskom?", h: ["Preteká aj Bratislavou.", "Je to druhá najdlhšia európska rieka."], a: ["Dunaj", "Hron", "Ipeľ", "Tisa"], correct: 0 },
+                    { q: "V ktorom roku vstúpilo Slovensko do Európskej únie?", h: ["Bolo to v novom tisícročí (rok 2004).", "Spolu s ďalšími štátmi východnej a strednej Európy."], a: ["2004", "1999", "2008", "2007"], correct: 0 },
+                    { q: "Ktoré mesto je sídlom slovenského parlamentu a vlády?", h: ["Naše hlavné mesto.", "Leží na Dunaji."], a: ["Bratislava", "Košice", "Banská Bystrica", "Nitra"], correct: 0 },
+                    { q: "Ktorý významný slovenský štúrovec sa narodil v Hlbokom a pôsobil ako kňaz?", h: ["Spolupracovník Ľudovíta Štúra.", "Meno začína na J. M."], a: ["Jozef Miloslav Hurban", "Ľudovít Štúr", "Michal Miloslav Hodža", "Ján Kollár"], correct: 0 },
+                    { q: "Ako sa nazýva najnižšie položené miesto na Slovensku?", h: ["Nachádza sa na východnom Slovensku.", "Oblasť pri rieke Bodrog."], a: ["Klin nad Bodrogom", "Bratislava", "Záhorie", "Podunajská nížina"], correct: 0 },
+                    { q: "Ktorý historický hrad je opradený legendou o Alžbete Báthoryčke?", h: ["Nachádza sa v Malých Karpatoch.", "Hrad spojený s krvavou pani."], a: ["Čachtický hrad", "Spišský hrad", "Oravský hrad", "Bojnický zámok"], correct: 0 },
+                    { q: "V ktorom roku podpísalo Slovensko vstup do vojenskej aliancie NATO?", h: ["Bolo to v rovnakom období ako vstup do EÚ.", "Rok 2004."], a: ["2004", "1993", "1999", "2010"], correct: 0 }
+                ],
+                anglictina: [
+                    { q: "Aký je minulý čas (Past Simple) od nepravidelného slovesa 'go'?", h: ["Nezapája sa koncovka -ed.", "Tvar začína na písmeno W."], a: ["Went", "Goed", "Was go", "Gone"], correct: 0 },
+                    { q: "Prelož do slovenčiny: 'Environment'", h: ["Týka sa to prírody a našej planéty.", "Okolie, v ktorom žijeme."], a: ["Životné prostredie", "Vesmír", "Vláda", "Ekonomika"], correct: 0 },
+                    { q: "Ktorý člen používame pred slovom začínajúcim na samohlásku?", h: ["Namiesto 'a' pridávame písmeno 'n'.", "Napríklad 'an apple'."], a: ["An", "A", "Some", "Any"], correct: 0 },
+                    { q: "Ako preložíme slovné spojenie 'High school'?", h: ["Škola pre študentov po základnej škole.", "Stredoškolské vzdelanie."], a: ["Stredná škola", "Vysoká škola", "Materská škola", "Kurz"], correct: 0 },
+                    { q: "Aký je preklad slovesa 'to understand'?", h: ["Mať niečo v hlave jasné.", "Chaptať / rozumieť."], a: ["Rozumieť", "Stáť", "Učiť sa", "Vysvetliť"], correct: 0 },
+                    { q: "Ako sa povie po anglicky 'Veda'?", h: ["Predmet skúmajúci prírodné zákony.", "Physics, Chemistry a Biology sú súčasti."], a: ["Science", "Math", "History", "Physics"], correct: 0 },
+                    { q: "Aký je preklad slova 'Future'?", h: ["To, čo len len príde (opak minulosti).", "Budúci čas."], a: ["Budúcnosť", "Minulosť", "Prítomnosť", "Vesmír"], correct: 0 },
+                    { q: "Doplň správne: 'She ... a book yesterday.' (Read - minulý čas)", h: ["Píše sa rovnako ako prítomný čas, ale inak sa číta.", "Minulý tvar slovesa čítať."], a: ["read", "reads", "reading", "readed"], correct: 0 },
+                    { q: "Ako preložíme prídavné meno 'Dangerous'?", h: ["Niečo, čo nie je bezpečné.", "Môže nám ublížiť."], a: ["Nebezpečný", "Bezpečný", "Rýchly", "Múdry"], correct: 0 },
+                    { q: "Aký je opačný význam slovíčka 'Always'?", h: ["Znamená to, že sa to nateje nikdy.", "Opak slova vždy."], a: ["Never", "Sometimes", "Often", "Usually"], correct: 0 }
+                ],
+                informatika: [
+                    { q: "Čo znamená skratka HTML?", h: ["Základný značkovací jazyk pre webové stránky.", "HyperText..."], a: ["HyperText Markup Language", "High Tech Modern Link", "Home Tool Maker Language", "Hyper Transfer Machine Logic"], correct: 0 },
+                    { q: "Čo je to RAM v počítači?", h: ["Ide o rýchlu dočasnú pamäť.", "Po vypnutí PC sa vymaže."], a: ["Operačná pamäť (RAM)", "Pevný disk", "Procesor", "Grafická karta"], correct: 0 },
+                    { q: "Ktorý súbor má príponu pre obrázok?", h: ["Bežné formáty pre fotky na webe.", "Napríklad .jpg alebo .png."], a: [".jpg / .png", ".mp3", ".docx", ".exe"], correct: 0 },
+                    { q: "Čo je binárny kód?", h: ["Základný jazyk počítača tvorený číslami.", "Skladačka núl a jednotiek."], a: ["Sústava zložená z 0 a 1", "Abeceda", "Špeciálny font", "Heslo na Wifi"], correct: 0 },
+                    { q: "Kto je zakladateľom spoločnosti Microsoft?", h: ["Jeden z najbohatších ľudí sveta.", "Volá sa Bill."], a: ["Bill Gates", "Elon Musk", "Jeff Bezos", "Linus Torvalds"], correct: 0 },
+                    { q: "Čo je to URL adresa?", h: ["Unikátny odkaz na webovú stránku.", "Píšeme ju do prehliadača."], a: ["Webová adresa stránky", "Typ počítačového vírusu", "Rýchlosť internetu", "Pamäť disku"], correct: 0 },
+                    { q: "Ktorý program slúži na tvorbu tabuliek a výpočtov (napr. Excel)?", h: ["Pracuje s bunkami a vzorcami.", "Tabuľkový..."], a: ["Tabuľkový procesor", "Editor fotiek", "Prehliadač", "Antivírus"], correct: 0 },
+                    { q: "Aké zariadenie prepája rôzne počítače do internetu?", h: ["Smeruje sieťovú premávku v domácnosti.", "Často má anténky a bliká."], a: ["Router", "Tlačiareň", "Myš", "Monitor"], correct: 0 },
+                    { q: "Čo je to phishing v kybernetickej bezpečnosti?", h: ["Podvodníci sa snažia vylákať heslá.", "Tvária sa ako banka alebo úrad."], a: ["Podvod s cieľom získať heslá", "Lov rýb v programe", "Zrýchlenie PC", "Záloha dát"], correct: 0 },
+                    { q: "Ktorý operačný systém vyvinula spoločnosť Apple pre svoje počítače?", h: ["Používa sa na Macbookoch.", "Značí sa ako Mac..."], a: ["macOS", "Windows", "Linux", "Android"], correct: 0 }
+                ],
+                fyzika: [
+                    { q: "Aké je znenie 1. Newtonovho pohybového zákona?", h: ["Hovorí o zotrvačnosti telies.", "Teleso zotrváva v pokoji alebo rovnomernom pohybe."], a: ["Zákon zotrvačnosti", "Zákon sily", "Zákon akcie a reakcie", "Gravitačný zákon"], correct: 0 },
+                    { q: "Aká je jednotka elektrického odporu?", h: ["Grécke písmeno Omega (Ω).", "Pomenovaná po nemeckom fyzikovi."], a: ["Ohm (Ω)", "Watt (W)", "Joule (J)", "Volt (V)"], correct: 0 },
+                    { q: "Aká je približná rýchlosť svetla vo vacuum?", h: ["Najrýchlejší jav vo vesmíre.", "Približne 300-tisíc kilometrov za sekundu."], a: ["300 000 km/s", "340 m/s", "150 km/h", "3000 km/s"], correct: 0 },
+                    { q: "Čo meria fyzikálna veličina Watt (W)?", h: ["Vyjadruje spotrebu alebo prácu za čas.", "Elektrický výkon."], a: ["Výkon", "Napätie", "Prúd", "Teplota"], correct: 0 },
+                    { q: "Ktorá sila brzdí pohyb telies po podložke?", h: ["Vzniká pri dotyku dvoch povrchov.", "Trenie."], a: ["Trecia sila", "Odstredivá sila", "Ťažová sila", "Prítlak"], correct: 0 },
+                    { q: "Aký vzorec platí pre výpočet kinetickej energie?", h: ["Závisí od hmotnosti a druhej mocniny rýchlosti.", "Obsahuje polovicu (1/2)."], a: ["E_k = 1/2 m v²", "F = m * a", "W = F * s", "p = m * v"], correct: 0 },
+                    { q: "Ktorá fyzikálna veličina sa meria v Newtonoch (N)?", h: ["Pôsobenie jedného telesa na druhé.", "Gravitačná alebo svalová..."], a: ["Sila", "Tlak", "Energia", "Výkon"], correct: 0 },
+                    { q: "Aká je teplota v bodoch topenia ľadu na Kelvinovej stupnici?", h: ["Absolútna nula je omnoho nižšie.", "Zodpovedá 0 stupňom Celzia."], a: ["273.15 K", "100 K", "0 K", "373 K"], correct: 0 },
+                    { q: "Čo vyjadruje Archimedov zákon?", h: ["Teleso ponorené do kvapaliny je nadnášané...", "Súvisí s plávaním predmetov."], a: ["Vytlačovacia sila telies v kvapaline", "Zákon zotrvačnosti", "Smer prúdu", "Optický odraz"], correct: 0 },
+                    { q: "Ktoré žiarenie má najkratšiu vlnovú dĺžku v elektromagnetickom spektrum?", h: ["Vzniká pri rádioaktívnom rozpade.", "Najprenikavejšie žiarenie (Gama)."], a: ["Gama žiarenie", "Infračervené", "Rádiové vlny", "Viditeľné svetlo"], correct: 0 }
+                ]
+            }
+        };
+
+        // Zoznam 20 úspechov (od jednoduchých po ťažké)
+        const ACHIEVEMENTS_DEF = [
+            { id: 'first_mission', title: 'Prvá misia', desc: 'Dokonči svoju prvú misiu', reward: 30 },
+            { id: 'scholar', title: 'Vzdelanec', desc: 'Získaj v misii aspoň 120 bodov', reward: 50 },
+            { id: 'pro', title: 'Elitný detektív', desc: 'Získaj maximálnych 200 bodov v misii', reward: 100 },
+            { id: 'rich', title: 'Vesmírny boháč', desc: 'Dosiahni zostatok 400+ kreditov', reward: 60 },
+            { id: 'collector', title: 'VIP Zberateľ', desc: 'Odomkni si ľubovoľný VIP predmet v obchode', reward: 50 },
+            { id: 'legend', title: 'Nezastaviteľná legenda', desc: 'Dokonči misiu s 200 bodmi bez straty života', reward: 150 },
+            { id: 'survivor', title: 'Tesný únik', desc: 'Dokonči misiu s jediným zostávajúcim životom', reward: 40 },
+            { id: 'hint_master', title: 'Detektív bez stôp', desc: 'Prekonaj misiu bez použitia čo i len jednej nápovedy', reward: 120 },
+            { id: 'math_genius', title: 'Matematický génius', desc: 'Získaj 200 bodov v matematike (1. alebo 2. st.)', reward: 80 },
+            { id: 'nature_lover', title: 'Prírodovedec', desc: 'Získaj 200 bodov v predmete Príroda & Bio', reward: 80 },
+            { id: 'history_buff', title: 'Historik zeme', desc: 'Získaj 200 bodov vo Vlastivede', reward: 80 },
+            { id: 'polyglot', title: 'Polyglot', desc: 'Získaj 200 bodov v Anglickom jazyku', reward: 80 },
+            { id: 'hacker', title: 'Kozmický hacker', desc: 'Získaj 200 bodov v Informatike', reward: 80 },
+            { id: 'physicist', title: 'Teoretický fyzik', desc: 'Získaj 200 bodov vo Fyzike & Vesmíre', reward: 80 },
+            { id: 'veteran', title: 'Skúsený veterán', desc: 'Úspešne dokonči 5 misií', reward: 100 },
+            { id: 'commander', title: 'Vesmírny veliteľ', desc: 'Úspešne dokonči 15 misií', reward: 250 },
+            { id: 'fashionista', title: 'Galaktický štýl', desc: 'Odomkni si aspoň 5 rôznych rámikov', reward: 150 },
+            { id: 'effect_master', title: 'Oslnivá žiara', desc: 'Kúp si aspoň jeden špeciálny efekt okolo mena', reward: 120 },
+            { id: 'millionaire', title: 'Kozmický miliardár', desc: 'Nazbieraj celkovo 2000+ kreditov', reward: 300 },
+            { id: 'ultimate_god', title: 'Boh vesmíru', desc: 'Odomkni všetkých 19 predchádzajúcich úspechov!', reward: 500 }
+        ];
+
+        function showScreen(screenId) {
+            ['screenMenu', 'screenGrade', 'screenSubject', 'screenGame', 'screenResult', 'screenShop', 'screenAchievements', 'screenLeaderboard'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        function updateUI() {
+            document.getElementById('playerCoins').innerText = state.coins;
+            document.getElementById('playerCoins2').innerText = state.coins;
+            document.getElementById('shopCoins').innerText = state.coins;
+
+            localStorage.setItem('vd_coins', state.coins);
+            localStorage.setItem('vd_frameId', state.selectedFrameId);
+            localStorage.setItem('vd_avatarVal', state.selectedAvatarVal);
+            localStorage.setItem('vd_effectId', state.selectedEffectId);
+            localStorage.setItem('vd_unlockedFrames', JSON.stringify(state.unlockedFrames));
+            localStorage.setItem('vd_unlockedAvatars', JSON.stringify(state.unlockedAvatars));
+            localStorage.setItem('vd_unlockedEffects', JSON.stringify(state.unlockedEffects));
+            localStorage.setItem('vd_ach', JSON.stringify(state.achievements));
+            localStorage.setItem('vd_missions', state.missionsCompleted);
+
+            const activeFrame = FRAMES_DATABASE.find(f => f.id === state.selectedFrameId) || FRAMES_DATABASE[0];
+            const activeEffect = EFFECTS_DATABASE.find(e => e.id === state.selectedEffectId) || EFFECTS_DATABASE[0];
+
+            const avatarBox = document.getElementById('menuAvatarBox');
+            avatarBox.className = `w-14 h-14 rounded-2xl bg-slate-950 flex items-center justify-center text-2xl ${activeFrame.style}`;
+            avatarBox.innerText = state.selectedAvatarVal;
+
+            document.getElementById('menuPlayerNameText').innerText = state.userName || "Detektív";
+            document.getElementById('menuEffectLeft').innerText = activeEffect.icon ? activeEffect.icon + " " : "";
+            document.getElementById('menuEffectRight').innerText = activeEffect.icon ? " " + activeEffect.icon : "";
+        }
+
+        // Firebase Auth: Meno a Heslo logika
+        function getEmailFromUsername(username) {
+            const cleanName = username.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+            return `${cleanName}@vesmirnydetektiv.app`;
+        }
+
+        async function registerWithUsername() {
+            const usernameInput = document.getElementById('authUsername').value.trim();
+            const password = document.getElementById('authPassword').value;
+
+            if (!usernameInput || usernameInput.length < 3) {
+                alert("Zadaj platné meno (aspoň 3 znaky)!");
+                return;
+            }
+            if (!password || password.length < 6) {
+                alert("Heslo musí mať aspoň 6 znakov!");
+                return;
+            }
+
+            state.userName = usernameInput;
+            const fakeEmail = getEmailFromUsername(usernameInput);
+
+            try {
+                const cred = await auth.createUserWithEmailAndPassword(fakeEmail, password);
+                alert("Registrácia úspešná! Vitaj v hre, " + usernameInput + "!");
+                await saveUserDataToCloud(cred.user.uid);
+                updateUI();
+            } catch (error) {
+                if (error.code === 'auth/email-already-in-use') {
+                    alert("Toto meno už je obsadené. Skús iné meno alebo sa prihlás.");
+                } else {
+                    alert("Chyba pri registrácii: " + error.message);
+                }
+            }
+        }
+
+        async function loginWithUsername() {
+            const usernameInput = document.getElementById('authUsername').value.trim();
+            const password = document.getElementById('authPassword').value;
+
+            if (!usernameInput || !password) {
+                alert("Zadaj meno aj heslo!");
+                return;
+            }
+
+            state.userName = usernameInput;
+            const fakeEmail = getEmailFromUsername(usernameInput);
+
+            try {
+                const cred = await auth.signInWithEmailAndPassword(fakeEmail, password);
+                alert("Úspešne prihlásený!");
+                await loadUserDataFromCloud(cred.user.uid);
+                updateUI();
+            } catch (error) {
+                alert("Nesprávne meno alebo heslo! Skontroluj údaje.");
+            }
+        }
+
+        function logoutUser() {
+            auth.signOut();
+            alert("Boli ste odhlásení.");
+        }
+
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                state.userId = user.uid;
+                document.getElementById('loggedOutView').classList.add('hidden');
+                document.getElementById('loggedInView').classList.remove('hidden');
+                document.getElementById('userNicknameDisplay').innerText = state.userName;
+                await loadUserDataFromCloud(user.uid);
+            } else {
+                state.userId = null;
+                document.getElementById('loggedOutView').classList.remove('hidden');
+                document.getElementById('loggedInView').classList.add('hidden');
+            }
+        });
+
+        async function saveUserDataToCloud(uid) {
+            if (!uid) return;
+            try {
+                await db.collection("hraci").doc(uid).set({
+                    userName: state.userName,
+                    coins: state.coins,
+                    selectedFrameId: state.selectedFrameId,
+                    selectedAvatarVal: state.selectedAvatarVal,
+                    selectedEffectId: state.selectedEffectId,
+                    unlockedFrames: state.unlockedFrames,
+                    unlockedAvatars: state.unlockedAvatars,
+                    unlockedEffects: state.unlockedEffects,
+                    achievements: state.achievements,
+                    missionsCompleted: state.missionsCompleted
+                }, { merge: true });
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function loadUserDataFromCloud(uid) {
+            if (!uid) return;
+            try {
+                const doc = await db.collection("hraci").doc(uid).get();
+                if (doc.exists) {
+                    const data = doc.data();
+                    state.userName = data.userName || state.userName;
+                    state.coins = data.coins !== undefined ? data.coins : state.coins;
+                    state.selectedFrameId = data.selectedFrameId || state.selectedFrameId;
+                    state.selectedAvatarVal = data.selectedAvatarVal || state.selectedAvatarVal;
+                    state.selectedEffectId = data.selectedEffectId || state.selectedEffectId;
+                    state.unlockedFrames = data.unlockedFrames || state.unlockedFrames;
+                    state.unlockedAvatars = data.unlockedAvatars || state.unlockedAvatars;
+                    state.unlockedEffects = data.unlockedEffects || state.unlockedEffects;
+                    state.achievements = data.achievements || state.achievements;
+                    state.missionsCompleted = data.missionsCompleted || state.missionsCompleted;
+                    updateUI();
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function goToGradeSelect() {
+            showScreen('screenGrade');
+            updateUI();
+        }
+
+        function selectGrade(grade) {
+            state.selectedGrade = grade;
+            document.getElementById('subjectHeaderTitle').innerText = grade === 1 ? "1. STUPEŇ ZŠ" : "2. STUPEŇ ZŠ";
+            showScreen('screenSubject');
+            updateUI();
+        }
+
+        function backToMenu() {
+            showScreen('screenMenu');
+            updateUI();
+        }
+
+        function selectSubject(subjectKey) {
+            state.currentSubject = subjectKey;
+            state.score = 0;
+            state.lives = 3;
+            state.currentIndex = 0;
+            state.currentHintsLevel = 0;
+            state.usedHintsThisGame = 0;
+
+            const titles = {
+                matematika: "Matematika",
+                prirodoveda: "Príroda & Bio",
+                vlastiveda: "Vlastiveda & Zem",
+                anglictina: "Anglický jazyk",
+                informatika: "Informatika",
+                fyzika: "Fyzika"
+            };
+            document.getElementById('currentSubjectTitle').innerText = titles[subjectKey] + ` (${state.selectedGrade}. st.)`;
+
+            let pool = [...SUBJECTS_DATABASE[state.selectedGrade][subjectKey]];
+            pool.sort(() => Math.random() - 0.5);
+            state.questionsList = pool.slice(0, 10);
+
+            showScreen('screenGame');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (state.currentIndex >= state.questionsList.length || state.lives <= 0) {
+                finishGame();
+                return;
+            }
+
+            const qData = state.questionsList[state.currentIndex];
+            document.getElementById('questionIndex').innerText = state.currentIndex + 1;
+            document.getElementById('currentScore').innerText = state.score;
+            document.getElementById('playerLives').innerText = state.lives;
+
+            state.currentHintsLevel = 0;
+            updateHintDisplay();
+
+            document.getElementById('questionText').innerText = qData.q;
+
+            let answersWithIndex = qData.a.map((ans, idx) => ({ ans, originalIdx: idx }));
+            answersWithIndex.sort(() => Math.random() - 0.5);
+
+            const grid = document.getElementById('answersGrid');
+            grid.innerHTML = '';
+
+            answersWithIndex.forEach((item) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full p-3 sm:p-3.5 bg-slate-800/80 hover:bg-indigo-900/50 border border-indigo-500/30 hover:border-indigo-400 rounded-2xl font-bold text-xs sm:text-sm text-left transition transform hover:scale-[1.01] cursor-pointer flex items-center justify-between";
+                btn.innerHTML = `<span>${item.ans}</span> <i class="fa-solid fa-chevron-right text-indigo-400 text-xs"></i>`;
+                btn.onclick = () => checkAnswer(item.originalIdx === qData.correct, btn);
+                grid.appendChild(btn);
+            });
+        }
+
+        function updateHintDisplay() {
+            const qData = state.questionsList[state.currentIndex];
+            const hintTextEl = document.getElementById('hintText');
+            const nextHintBtn = document.getElementById('nextHintBtn');
+            const hintCounterEl = document.getElementById('hintCounter');
+
+            if (state.currentHintsLevel === 0) {
+                hintTextEl.innerText = "🔒 Žiadna stopa nie je odhalená. Klikni nižšie pre odomknutie.";
+                nextHintBtn.style.display = "block";
+                nextHintBtn.innerText = "Odomknúť stopu 1 (-5 b.)";
+                hintCounterEl.innerText = "Stopy skryté";
+            } else if (state.currentHintsLevel === 1) {
+                hintTextEl.innerText = "1. Stopa: " + qData.h[0];
+                nextHintBtn.style.display = "block";
+                nextHintBtn.innerText = "Odomknúť stopu 2 (-8 b.)";
+                hintCounterEl.innerText = "Stopa 1 z 2";
+            } else {
+                hintTextEl.innerText = "2. Stopa: " + qData.h[1];
+                nextHintBtn.style.display = "none";
+                hintCounterEl.innerText = "Všetky stopy odhalené";
+            }
+        }
+
+        function revealNextHint() {
+            const cost = state.currentHintsLevel === 0 ? 5 : 8;
+            if (state.score >= cost) {
+                state.score -= cost;
+                document.getElementById('currentScore').innerText = state.score;
+                state.currentHintsLevel++;
+                state.usedHintsThisGame = (state.usedHintsThisGame || 0) + 1;
+                updateHintDisplay();
+            } else {
+                alert("Nedostatok bodov na odomknutie stopy!");
+            }
+        }
+
+        function checkAnswer(isCorrect, btnElement) {
+            const buttons = document.getElementById('answersGrid').querySelectorAll('button');
+            buttons.forEach(b => b.disabled = true);
+
+            if (isCorrect) {
+                playSound('correct');
+                btnElement.classList.remove('bg-slate-800/80', 'border-indigo-500/30');
+                btnElement.classList.add('bg-emerald-600/40', 'border-emerald-400', 'text-emerald-200');
+                state.score += 20;
+            } else {
+                playSound('wrong');
+                btnElement.classList.remove('bg-slate-800/80', 'border-indigo-500/30');
+                btnElement.classList.add('bg-rose-600/40', 'border-rose-400', 'text-rose-200');
+                state.lives--;
+            }
+
+            document.getElementById('currentScore').innerText = state.score;
+            document.getElementById('playerLives').innerText = state.lives;
+
+            setTimeout(() => {
+                state.currentIndex++;
+                loadQuestion();
+            }, 1200);
+        }
+
+        // Vyhodnotenie úspechov a konca misie
+        async function finishGame() {
+            showScreen('screenResult');
+            
+            state.missionsCompleted++;
+            const earnedCoins = Math.floor(state.score / 2);
+            state.coins += earnedCoins;
+
+            let newlyUnlockedCoins = 0;
+            let achUnlockedCount = 0;
+
+            function unlockAch(id) {
+                if (!state.achievements[id]) {
+                    state.achievements[id] = true;
+                    const def = ACHIEVEMENTS_DEF.find(a => a.id === id);
+                    if (def) {
+                        newlyUnlockedCoins += def.reward;
+                        achUnlockedCount++;
+                    }
+                }
+            }
+
+            // Kontrola 20 úspechov
+            unlockAch('first_mission');
+            if (state.score >= 120) unlockAch('scholar');
+            if (state.score >= 200) unlockAch('pro');
+            if (state.coins >= 400) unlockAch('rich');
+            if (state.coins >= 2000) unlockAch('millionaire');
+            if (state.unlockedFrames.length > 1 || state.unlockedAvatars.length > 1 || state.unlockedEffects.length > 1) unlockAch('collector');
+            if (state.unlockedFrames.length >= 5) unlockAch('fashionista');
+            if (state.unlockedEffects.length > 1) unlockAch('effect_master');
+            if (state.score >= 200 && state.lives === 3) unlockAch('legend');
+            if (state.lives === 1) unlockAch('survivor');
+            if ((state.usedHintsThisGame || 0) === 0 && state.score >= 100) unlockAch('hint_master');
+
+            if (state.currentSubject === 'matematika' && state.score >= 200) unlockAch('math_genius');
+            if (state.currentSubject === 'prirodoveda' && state.score >= 200) unlockAch('nature_lover');
+            if (state.currentSubject === 'vlastiveda' && state.score >= 200) unlockAch('history_buff');
+            if (state.currentSubject === 'anglictina' && state.score >= 200) unlockAch('polyglot');
+            if (state.currentSubject === 'informatika' && state.score >= 200) unlockAch('hacker');
+            if (state.currentSubject === 'fyzika' && state.score >= 200) unlockAch('physicist');
+
+            if (state.missionsCompleted >= 5) unlockAch('veteran');
+            if (state.missionsCompleted >= 15) unlockAch('commander');
+
+            // Skontroluj ultimátny úspech (všetkých 19)
+            let all19 = true;
+            ACHIEVEMENTS_DEF.slice(0, 19).forEach(a => {
+                if (!state.achievements[a.id]) all19 = false;
+            });
+            if (all19) unlockAch('ultimate_god');
+
+            state.coins += newlyUnlockedCoins;
+            updateUI();
+            saveUserDataToCloud(state.userId);
+
+            document.getElementById('resScore').innerText = `+${earnedCoins + newlyUnlockedCoins} kreditov (${state.score} bodov)`;
+            
+            const noticeEl = document.getElementById('resAchNotice');
+            if (achUnlockedCount > 0) {
+                noticeEl.innerText = `✨ Odomknuté nové úspechy! Bonus: +${newlyUnlockedCoins} kreditov!`;
+                noticeEl.classList.remove('hidden');
+            } else {
+                noticeEl.classList.add('hidden');
+            }
+
+            try {
+                await db.collection("rebricek").add({
+                    name: state.userName,
+                    score: state.score,
+                    avatar: state.selectedAvatarVal,
+                    frameStyle: (FRAMES_DATABASE.find(f => f.id === state.selectedFrameId) || FRAMES_DATABASE[0]).style,
+                    effectIcon: (EFFECTS_DATABASE.find(e => e.id === state.selectedEffectId) || EFFECTS_DATABASE[0]).icon,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function nacitajOnlineRebricek() {
+            showScreen('screenLeaderboard');
+            const list = document.getElementById('leaderboardList');
+            list.innerHTML = '<div class="text-center text-xs text-slate-400 py-8">Načítavam online rebríček z cloudu...</div>';
+
+            try {
+                const snapshot = await db.collection("rebricek").orderBy("score", "desc").limit(10).get();
+                list.innerHTML = '';
+                
+                if (snapshot.empty) {
+                    list.innerHTML = '<div class="text-center text-xs text-slate-400 py-8">Zatiaľ žiadne záznamy v rebríčku. Buď prvý!</div>';
+                    return;
+                }
+
+                let poradie = 1;
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const avatar = data.avatar || '👨‍🚀';
+                    const frameStyle = data.frameStyle || 'border border-indigo-500/40 text-indigo-400';
+                    const effect = data.effectIcon || '';
+
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center justify-between p-3 rounded-2xl bg-slate-800/70 border border-indigo-500/20 text-xs sm:text-sm';
+                    row.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="font-black w-6 text-center ${poradie === 1 ? 'text-yellow-400 text-base' : poradie === 2 ? 'text-slate-300' : poradie === 3 ? 'text-amber-600' : 'text-slate-500'}">${poradie}.</span>
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl bg-slate-950 ${frameStyle}">
+                                ${avatar}
+                            </div>
+                            <span class="font-bold text-white">${effect ? effect + ' ' : ''}${data.name || 'Agent'}${effect ? ' ' + effect : ''}</span>
+                        </div>
+                        <span class="font-extrabold text-yellow-400">${data.score} b.</span>
+                    `;
+                    list.appendChild(row);
+                    poradie++;
+                });
+            } catch (e) {
+                list.innerHTML = '<div class="text-center text-xs text-red-400 py-8">Nepodarilo sa načítať online rebríček.</div>';
+            }
+        }
+
+        function openLeaderboard() { nacitajOnlineRebricek(); }
+        
+        let currentShopTab = 'frames';
+        function switchShopTab(tab) {
+            currentShopTab = tab;
+            document.getElementById('tabFramesBtn').className = `px-3 py-1.5 text-xs font-bold rounded-xl cursor-pointer transition ${tab === 'frames' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'}`;
+            document.getElementById('tabAvatarsBtn').className = `px-3 py-1.5 text-xs font-bold rounded-xl cursor-pointer transition ${tab === 'avatars' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'}`;
+            document.getElementById('tabEffectsBtn').className = `px-3 py-1.5 text-xs font-bold rounded-xl cursor-pointer transition ${tab === 'effects' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'}`;
+            renderShopItems();
+        }
+
+        function openShop() { 
+            showScreen('screenShop'); 
+            switchShopTab('frames');
+            updateUI(); 
+        }
+
+        function renderShopItems() {
+            const container = document.getElementById('shopItemsContainer');
+            container.innerHTML = '';
+
+            if (currentShopTab === 'frames') {
+                FRAMES_DATABASE.forEach(f => {
+                    const isUnlocked = state.unlockedFrames.includes(f.id);
+                    const isEquipped = state.selectedFrameId === f.id;
+
+                    container.innerHTML += `
+                        <div class="p-3 rounded-2xl bg-slate-800/60 border border-indigo-500/20 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold ${f.style}">✨</div>
+                                <div>
+                                    <h3 class="font-bold text-xs sm:text-sm text-white">${f.name}</h3>
+                                    <p class="text-[11px] text-yellow-400 font-bold">${f.price} kreditov</p>
+                                </div>
+                            </div>
+                            <div>
+                                ${isEquipped ? '<span class="text-[11px] font-bold px-3 py-1.5 bg-indigo-600 text-white rounded-xl">Používa sa</span>' : 
+                                  isUnlocked ? `<button onclick="playSound('click'); equipFrame('${f.id}')" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs rounded-xl cursor-pointer">Použiť</button>` : 
+                                  `<button onclick="playSound('buy'); buyFrame('${f.id}', ${f.price})" class="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-extrabold text-xs rounded-xl cursor-pointer">Kúpiť</button>`}
+                            </div>
+                        </div>
+                    `;
+                });
+            } else if (currentShopTab === 'avatars') {
+                AVATARS_DATABASE.forEach(a => {
+                    const isUnlocked = state.unlockedAvatars.includes(a.id);
+                    const isEquipped = state.selectedAvatarVal === a.val;
+
+                    container.innerHTML += `
+                        <div class="p-3 rounded-2xl bg-slate-800/60 border border-indigo-500/20 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-slate-900 border border-indigo-500/40 flex items-center justify-center text-xl">${a.val}</div>
+                                <div>
+                                    <h3 class="font-bold text-xs sm:text-sm text-white">${a.name}</h3>
+                                    <p class="text-[11px] text-yellow-400 font-bold">${a.price} kreditov</p>
+                                </div>
+                            </div>
+                            <div>
+                                ${isEquipped ? '<span class="text-[11px] font-bold px-3 py-1.5 bg-indigo-600 text-white rounded-xl">Používa sa</span>' : 
+                                  isUnlocked ? `<button onclick="playSound('click'); equipAvatar('${a.val}')" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs rounded-xl cursor-pointer">Použiť</button>` : 
+                                  `<button onclick="playSound('buy'); buyAvatar('${a.id}', '${a.val}', ${a.price})" class="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-extrabold text-xs rounded-xl cursor-pointer">Kúpiť</button>`}
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                EFFECTS_DATABASE.forEach(e => {
+                    const isUnlocked = state.unlockedEffects.includes(e.id);
+                    const isEquipped = state.selectedEffectId === e.id;
+
+                    container.innerHTML += `
+                        <div class="p-3 rounded-2xl bg-slate-800/60 border border-indigo-500/20 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-slate-900 border border-indigo-500/40 flex items-center justify-center text-xl">${e.icon || '✨'}</div>
+                                <div>
+                                    <h3 class="font-bold text-xs sm:text-sm text-white">${e.name}</h3>
+                                    <p class="text-[11px] text-yellow-400 font-bold">${e.price} kreditov</p>
+                                </div>
+                            </div>
+                            <div>
+                                ${isEquipped ? '<span class="text-[11px] font-bold px-3 py-1.5 bg-indigo-600 text-white rounded-xl">Používa sa</span>' : 
+                                  isUnlocked ? `<button onclick="playSound('click'); equipEffect('${e.id}')" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs rounded-xl cursor-pointer">Použiť</button>` : 
+                                  `<button onclick="playSound('buy'); buyEffect('${e.id}', ${e.price})" class="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-extrabold text-xs rounded-xl cursor-pointer">Kúpiť</button>`}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        function buyFrame(id, price) {
+            if (state.coins >= price) {
+                state.coins -= price;
+                state.unlockedFrames.push(id);
+                state.selectedFrameId = id;
+                state.achievements['collector'] = true;
+                if (state.unlockedFrames.length >= 5) state.achievements['fashionista'] = true;
+                updateUI();
+                saveUserDataToCloud(state.userId);
+                renderShopItems();
+            } else {
+                alert("Nedostatok kreditov! Oohraj ďalšie misie.");
+            }
+        }
+        function equipFrame(id) { state.selectedFrameId = id; updateUI(); saveUserDataToCloud(state.userId); renderShopItems(); }
+
+        function buyAvatar(id, val, price) {
+            if (state.coins >= price) {
+                state.coins -= price;
+                state.unlockedAvatars.push(id);
+                state.selectedAvatarVal = val;
+                state.achievements['collector'] = true;
+                updateUI();
+                saveUserDataToCloud(state.userId);
+                renderShopItems();
+            } else {
+                alert("Nedostatok kreditov! Oohraj ďalšie misie.");
+            }
+        }
+        function equipAvatar(val) { state.selectedAvatarVal = val; updateUI(); saveUserDataToCloud(state.userId); renderShopItems(); }
+
+        function buyEffect(id, price) {
+            if (state.coins >= price) {
+                state.coins -= price;
+                state.unlockedEffects.push(id);
+                state.selectedEffectId = id;
+                state.achievements['collector'] = true;
+                state.achievements['effect_master'] = true;
+                updateUI();
+                saveUserDataToCloud(state.userId);
+                renderShopItems();
+            } else {
+                alert("Nedostatok kreditov! Oohraj ďalšie misie.");
+            }
+        }
+        function equipEffect(id) { state.selectedEffectId = id; updateUI(); saveUserDataToCloud(state.userId); renderShopItems(); }
+
+        function openAchievements() {
+            showScreen('screenAchievements');
+            const list = document.getElementById('achievementsList');
+            list.innerHTML = '';
+
+            let doneCount = 0;
+            ACHIEVEMENTS_DEF.forEach(a => {
+                const isDone = !!state.achievements[a.id];
+                if (isDone) doneCount++;
+
+                list.innerHTML += `
+                    <div class="p-3 rounded-2xl bg-slate-800/60 border ${isDone ? 'border-emerald-500/40 bg-emerald-950/20' : 'border-slate-700'} flex items-center justify-between">
+                        <div>
+                            <h3 class="font-bold text-xs sm:text-sm ${isDone ? 'text-emerald-300' : 'text-slate-300'}">${a.title} (+${a.reward} kr.)</h3>
+                            <p class="text-[11px] text-slate-400">${a.desc}</p>
+                        </div>
+                        <span class="text-[11px] font-bold px-3 py-1 rounded-xl whitespace-nowrap ml-2 ${isDone ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-400'}">
+                            ${isDone ? 'Splnené ✓' : 'Zamknuté'}
+                        </span>
+                    </div>
+                `;
+            });
+            document.getElementById('achCount').innerText = doneCount;
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>
