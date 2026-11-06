@@ -2029,7 +2029,7 @@
 
             // Skontroluj ultimátny úspech (všetkých 19)
             let all19 = true;
-            ACHIEVEMENTS_DEF.slice(0, 19).forEach(a => {
+            ACHIEVEMENTS_DEF.slice(0, 25).forEach(a => {
                 if (!state.achievements[a.id]) all19 = false;
             });
             if (all19) unlockAch('ultimate_god');
