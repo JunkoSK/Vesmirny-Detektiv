@@ -79,7 +79,7 @@
                 VESMÍRNY DETEKTÍV
             </h1>
             <p class="text-slate-400 text-xs sm:text-sm max-w-md mb-3">
-                Vedomostná misia so 20 úspechmi, VIP obchodom a cloudovým úložiskom!
+                Vedomostná misia s rebríčkom, VIP obchodom a cloudovým úložiskom!
             </p>
 
             <!-- Autentifikácia cez Meno a Heslo -->
@@ -1601,27 +1601,40 @@
 
         // Zoznam 20 úspechov (od jednoduchých po ťažké)
         const ACHIEVEMENTS_DEF = [
-            { id: 'first_mission', title: 'Prvá misia', desc: 'Dokonči svoju prvú misiu', reward: 30 },
-            { id: 'scholar', title: 'Vzdelanec', desc: 'Získaj v misii aspoň 120 bodov', reward: 50 },
-            { id: 'pro', title: 'Elitný detektív', desc: 'Získaj maximálnych 200 bodov v misii', reward: 100 },
-            { id: 'rich', title: 'Vesmírny boháč', desc: 'Dosiahni zostatok 400+ kreditov', reward: 60 },
-            { id: 'collector', title: 'VIP Zberateľ', desc: 'Odomkni si ľubovoľný VIP predmet v obchode', reward: 50 },
-            { id: 'legend', title: 'Nezastaviteľná legenda', desc: 'Dokonči misiu s 200 bodmi bez straty života', reward: 150 },
-            { id: 'survivor', title: 'Tesný únik', desc: 'Dokonči misiu s jediným zostávajúcim životom', reward: 40 },
-            { id: 'hint_master', title: 'Detektív bez stôp', desc: 'Prekonaj misiu bez použitia čo i len jednej nápovedy', reward: 120 },
-            { id: 'math_genius', title: 'Matematický génius', desc: 'Získaj 200 bodov v matematike (1. alebo 2. st.)', reward: 80 },
-            { id: 'nature_lover', title: 'Prírodovedec', desc: 'Získaj 200 bodov v predmete Príroda & Bio', reward: 80 },
-            { id: 'history_buff', title: 'Historik zeme', desc: 'Získaj 200 bodov vo Vlastivede', reward: 80 },
-            { id: 'polyglot', title: 'Polyglot', desc: 'Získaj 200 bodov v Anglickom jazyku', reward: 80 },
-            { id: 'hacker', title: 'Kozmický hacker', desc: 'Získaj 200 bodov v Informatike', reward: 80 },
-            { id: 'physicist', title: 'Teoretický fyzik', desc: 'Získaj 200 bodov vo Fyzike & Vesmíre', reward: 80 },
-            { id: 'veteran', title: 'Skúsený veterán', desc: 'Úspešne dokonči 5 misií', reward: 100 },
-            { id: 'commander', title: 'Vesmírny veliteľ', desc: 'Úspešne dokonči 15 misií', reward: 250 },
-            { id: 'fashionista', title: 'Galaktický štýl', desc: 'Odomkni si aspoň 5 rôznych rámikov', reward: 150 },
-            { id: 'effect_master', title: 'Oslnivá žiara', desc: 'Kúp si aspoň jeden špeciálny efekt okolo mena', reward: 120 },
-            { id: 'millionaire', title: 'Kozmický miliardár', desc: 'Nazbieraj celkovo 2000+ kreditov', reward: 300 },
-            { id: 'ultimate_god', title: 'Boh vesmíru', desc: 'Odomkni všetkých 19 predchádzajúcich úspechov!', reward: 500 }
-        ];
+    // 🟢 Jednoduché (odmena 30 - 50 kreditov)
+    { id: 'first_mission', title: 'Prvá misia', desc: 'Dokonči svoju prvú misiu', reward: 30, icon: '🎯' },
+    { id: 'survivor', title: 'Tesný únik', desc: 'Dokonči misiu s jediným zostávajúcim životom', reward: 40, icon: '🛡️' },
+    { id: 'scholar', title: 'Vzdelanec', desc: 'Získaj v misii aspoň 120 bodov', reward: 50, icon: '📖' },
+    { id: 'collector', title: 'VIP Zberateľ', desc: 'Odomkni si ľubovoľný VIP predmet v obchode', reward: 50, icon: '💎' },
+
+    // 🟡 Stredne náročné (odmena 60 - 80 kreditov)
+    { id: 'rich', title: 'Vesmírny boháč', desc: 'Dosiahni zostatok 400+ kreditov', reward: 60, icon: '💰' },
+    { id: 'streak_7', title: 'Týždenný maratón', desc: 'Spusti aplikáciu a hraj 7 dní za sebou', reward: 70, icon: '📅' },
+    { id: 'math_genius', title: 'Matematický génius', desc: 'Získaj 200 bodov v matematike (1. alebo 2. st.)', reward: 80, icon: '🔢' },
+    { id: 'nature_lover', title: 'Prírodovedec', desc: 'Získaj 200 bodov v predmete Príroda & Bio', reward: 80, icon: '🌿' },
+    { id: 'history_buff', title: 'Historik zeme', desc: 'Získaj 200 bodov vo Vlastivede', reward: 80, icon: '🏛️' },
+    { id: 'polyglot', title: 'Polyglot', desc: 'Získaj 200 bodov v Anglickom jazyku', reward: 80, icon: '🌍' },
+    { id: 'hacker', title: 'Kozmický hacker', desc: 'Získaj 200 bodov v Informatike', reward: 80, icon: '💻' },
+    { id: 'physicist', title: 'Teoretický fyzik', desc: 'Získaj 200 bodov vo Fyzike & Vesmíre', reward: 80, icon: '⚛️' },
+
+    // 🟠 Náročnejšie (odmena 100 - 150 kreditov)
+    { id: 'pro', title: 'Elitný detektív', desc: 'Získaj maximálnych 200 bodov v misii', reward: 100, icon: '🔍' },
+    { id: 'veteran', title: 'Skúsený veterán', desc: 'Úspešne dokonči 5 misií', reward: 100, icon: '🎖️' },
+    { id: 'hint_master', title: 'Detektív bez stôp', desc: 'Prekonaj misiu bez použitia čo i len jednej nápovedy', reward: 120, icon: '🕵️‍♂️' },
+    { id: 'effect_master', title: 'Oslnivá žiara', desc: 'Kúp si aspoň jeden špeciálny efekt okolo mena', reward: 120, icon: '✨' },
+    { id: 'night_coder', title: 'Nočná mora bugov', desc: 'Odpovedz správne na otázku z informatiky medzi 0:00 a 4:00', reward: 130, icon: '🌙' },
+    { id: 'legend', title: 'Nezastaviteľná legenda', desc: 'Dokonči misiu s 200 bodmi bez straty života', reward: 150, icon: '👑' },
+    { id: 'fashionista', title: 'Galaktický štýl', desc: 'Odomkni si aspoň 5 rôznych rámikov', reward: 150, icon: '🖼️' },
+
+    // 🔴 Extrémne / Majstrovské (odmena 200 - 500 kreditov)
+    { id: 'comeback_king', title: 'Veľký návrat', desc: 'Vyhraj kvíz po tom, čo ti ostávala posledná životová rezerva', reward: 180, icon: '🔥' },
+    { id: 'polyglot_all', title: 'Všestranný talent', desc: 'Dokonči aspoň jeden kvíz zo všetkých dostupných predmetov', reward: 200, icon: '🎓' },
+    { id: 'curious_mind', title: 'Zvedavec', desc: 'Klikni na nápovedu (ikonu žiarovky) pri 50 rôznych otázkach', reward: 220, icon: '💡' },
+    { id: 'commander', title: 'Vesmírny veliteľ', desc: 'Úspešne dokonči 15 misií', reward: 250, icon: '🚀' },
+    { id: 'rich_kid', title: 'Zlatá baňa', desc: 'Zastrihni na účte naraz viac ako 5 000 bodov/mincí', reward: 280, icon: '💎' },
+    { id: 'millionaire', title: 'Kozmický miliardár', desc: 'Nazbieraj celkovo 2000+ kreditov', reward: 300, icon: '🪐' },
+    { id: 'ultimate_god', title: 'Boh vesmíru', desc: 'Odomkni všetkých predchádzajúcich 25 úspechov!', reward: 500, icon: '🌌' }
+];
 
         function showScreen(screenId) {
             ['screenMenu', 'screenGrade', 'screenSubject', 'screenGame', 'screenResult', 'screenShop', 'screenAchievements', 'screenLeaderboard'].forEach(id => {
