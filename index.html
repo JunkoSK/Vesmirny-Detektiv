@@ -344,42 +344,61 @@
         const db = firebase.firestore();
         const auth = firebase.auth();
 
-        // Rámiky (vyvážená ekonomika)
+        // Rámiky (15 položiek, zoradené od najlacnejšieho po najdrahšie)
         const FRAMES_DATABASE = [
             { id: 'f_none', name: 'Základný okraj', price: 0, style: 'border border-indigo-500/40 text-indigo-400' },
-            { id: 'f_bronze', name: 'Bronzový rámik', price: 120, style: 'border-2 border-amber-700 text-amber-600 shadow-[0_0_12px_rgba(180,83,9,0.3)]' },
-            { id: 'f_silver', name: 'Strieborný rámik', price: 250, style: 'border-2 border-slate-300 text-slate-200 shadow-[0_0_12px_rgba(203,213,225,0.3)]' },
-            { id: 'f_gold', name: 'Zlatý rámik', price: 450, style: 'border-2 border-yellow-400 text-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.4)]' },
-            { id: 'f_emerald', name: 'Smaragdový žiarič', price: 700, style: 'border-2 border-emerald-400 text-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.4)]' },
-            { id: 'f_ruby', name: 'Rubínový plameň', price: 1000, style: 'border-2 border-rose-500 text-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.4)]' },
-            { id: 'f_neon', name: 'Neónový fialový', price: 1400, style: 'border-2 border-purple-500 text-purple-400 shadow-[0_0_18px_rgba(168,85,247,0.5)]' },
-            { id: 'f_cyber', name: 'Kybernetický azúrový', price: 1800, style: 'border-2 border-cyan-400 text-cyan-300 shadow-[0_0_18px_rgba(34,211,238,0.5)]' },
-            { id: 'f_plasma', name: 'Plazmový žiarič', price: 2300, style: 'border-2 border-indigo-400 text-indigo-300 shadow-[0_0_20px_rgba(99,102,241,0.6)]' },
-            { id: 'f_rainbow', name: 'Galaktický dúhový', price: 3000, style: 'border-2 border-pink-500 text-pink-400 shadow-[0_0_22px_rgba(236,72,153,0.6)]' }
+            { id: 'f_bronze', name: 'Bronzový rámik', price: 100, style: 'border-2 border-amber-700 text-amber-600 shadow-[0_0_12px_rgba(180,83,9,0.3)]' },
+            { id: 'f_silver', name: 'Strieborný rámik', price: 220, style: 'border-2 border-slate-300 text-slate-200 shadow-[0_0_12px_rgba(203,213,225,0.3)]' },
+            { id: 'f_gold', name: 'Zlatý rámik', price: 380, style: 'border-2 border-yellow-400 text-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.4)]' },
+            { id: 'f_emerald', name: 'Smaragdový žiarič', price: 560, style: 'border-2 border-emerald-400 text-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.4)]' },
+            { id: 'f_ruby', name: 'Rubínový plameň', price: 780, style: 'border-2 border-rose-500 text-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.4)]' },
+            { id: 'f_neon', name: 'Neónový fialový', price: 1050, style: 'border-2 border-purple-500 text-purple-400 shadow-[0_0_18px_rgba(168,85,247,0.5)]' },
+            { id: 'f_cyber', name: 'Kybernetický azúrový', price: 1350, style: 'border-2 border-cyan-400 text-cyan-300 shadow-[0_0_18px_rgba(34,211,238,0.5)]' },
+            { id: 'f_plasma', name: 'Plazmový žiarič', price: 1700, style: 'border-2 border-indigo-400 text-indigo-300 shadow-[0_0_20px_rgba(99,102,241,0.6)]' },
+            { id: 'f_amethyst', name: 'Ametystová žiara', price: 2100, style: 'border-2 border-fuchsia-400 text-fuchsia-300 shadow-[0_0_20px_rgba(217,70,239,0.6)]' },
+            { id: 'f_solar', name: 'Solárny plameň', price: 2550, style: 'border-2 border-orange-400 text-orange-300 shadow-[0_0_22px_rgba(251,146,60,0.6)]' },
+            { id: 'f_matrix', name: 'Matrixový kód', price: 3050, style: 'border-2 border-lime-400 text-lime-300 shadow-[0_0_22px_rgba(163,230,53,0.6)]' },
+            { id: 'f_crystal', name: 'Kryštálový ľad', price: 3600, style: 'border-2 border-sky-300 text-sky-200 shadow-[0_0_24px_rgba(125,211,252,0.7)]' },
+            { id: 'f_rainbow', name: 'Galaktický dúhový', price: 4200, style: 'border-2 border-pink-500 text-pink-400 shadow-[0_0_25px_rgba(236,72,153,0.7)]' },
+            { id: 'f_supernova', name: 'Supernova', price: 5000, style: 'border-2 border-red-500 text-yellow-300 shadow-[0_0_30px_rgba(239,68,68,0.9)]' }
         ];
 
-        // Avatary
+        // Avatary (15 položiek vrátane sliepky, zoradené od najlacnejšieho po najdrahšie)
         const AVATARS_DATABASE = [
             { id: 'a_astronaut', name: 'Kozmonaut', price: 0, val: '👨‍🚀' },
-            { id: 'a_alien', name: 'Mimozemšťan 👽', price: 100, val: '👽' },
-            { id: 'a_fox', name: 'Bystrá Líška 🦊', price: 180, val: '🦊' },
-            { id: 'a_robot', name: 'Vesmírny Robot 🤖', price: 280, val: '🤖' },
-            { id: 'a_lion', name: 'Kráľ Lev 🦁', price: 400, val: '🦁' },
-            { id: 'a_tiger', name: 'Hviezdny Tiger 🐯', price: 550, val: '🐯' },
-            { id: 'a_unicorn', name: 'Mýtický Jednorožec 🦄', price: 750, val: '🦄' },
-            { id: 'a_dragon', name: 'Vesmírny Drak 🐲', price: 1000, val: '🐲' },
-            { id: 'a_wizard', name: 'Kozmický Čarodej 🧙‍♂️', price: 1350, val: '🧙‍♂️' },
-            { id: 'a_king', name: 'Galaktický Imperátor 👑', price: 1800, val: '👑' }
+            { id: 'a_alien', name: 'Mimozemšťan 👽', price: 80, val: '👽' },
+            { id: 'a_chicken', name: 'Bystrá Sliepka 🐔', price: 150, val: '🐔' },
+            { id: 'a_fox', name: 'Bystrá Líška 🦊', price: 230, val: '🦊' },
+            { id: 'a_robot', name: 'Vesmírny Robot 🤖', price: 330, val: '🤖' },
+            { id: 'a_lion', name: 'Kráľ Lev 🦁', price: 450, val: '🦁' },
+            { id: 'a_tiger', name: 'Hviezdny Tiger 🐯', price: 600, val: '🐯' },
+            { id: 'a_unicorn', name: 'Mýtický Jednorožec 🦄', price: 800, val: '🦄' },
+            { id: 'a_ninja', name: 'Tienistý Ninja 🥷', price: 1050, val: '🥷' },
+            { id: 'a_dragon', name: 'Vesmírny Drak 🐲', price: 1350, val: '🐲' },
+            { id: 'a_wizard', name: 'Kozmický Čarodej 🧙‍♂️', price: 1700, val: '🧙‍♂️' },
+            { id: 'a_phoenix', name: 'Ohnivý Fénix 🦅', price: 2100, val: '🦅' },
+            { id: 'a_king', name: 'Galaktický Imperátor 👑', price: 2600, val: '👑' },
+            { id: 'a_god', name: 'Vesmírne Božstvo 🌌', price: 3300, val: '🌌' },
+            { id: 'a_universe', name: 'Pán Vesmíru 🌠', price: 4200, val: '🌠' }
         ];
 
-        // Efekty okolo mena
+        // Efekty okolo mena (15 položiek, zoradené od najlacnejšieho po najdrahšie)
         const EFFECTS_DATABASE = [
             { id: 'e_none', name: 'Bez efektu', price: 0, icon: '' },
-            { id: 'e_stars', name: '✨ Viac hviezdičiek', price: 500, icon: '✨' },
-            { id: 'e_fire', name: '🔥 Ohnivé plamene', price: 900, icon: '🔥' },
-            { id: 'e_dragon', name: '🐲 Malý Drak', price: 1500, icon: '🐲' },
-            { id: 'e_crown', name: '👑 Zlatá koruna', price: 2200, icon: '👑' },
-            { id: 'e_galaxy', name: '🌌 Galaktická žiara', price: 3200, icon: '🌌' }
+            { id: 'e_sparkles', name: '✨ Jemné iskry', price: 250, icon: '✨' },
+            { id: 'e_stars', name: '🌟 Viac hviezdičiek', price: 500, icon: '🌟' },
+            { id: 'e_fire', name: '🔥 Ohnivé plamene', price: 850, icon: '🔥' },
+            { id: 'e_leaves', name: '🍃 Lístky a príroda', price: 1200, icon: '🍃' },
+            { id: 'e_lightning', name: '⚡ Elektrické blesky', price: 1600, icon: '⚡' },
+            { id: 'e_snowflake', name: '❄️ Ľadové kryštály', price: 2050, icon: '❄️' },
+            { id: 'e_dragon', name: '🐲 Malý Drak', price: 2550, icon: '🐲' },
+            { id: 'e_skull', name: '💀 Temná aura', price: 3100, icon: '💀' },
+            { id: 'e_heart', name: '💖 Láska a srdiečka', price: 3700, icon: '💖' },
+            { id: 'e_crown', name: '👑 Zlatá koruna', price: 4400, icon: '👑' },
+            { id: 'e_diamond', name: '💎 Drahokamový prach', price: 5200, icon: '💎' },
+            { id: 'e_galaxy', name: '🌌 Galaktická žiara', price: 6100, icon: '🌌' },
+            { id: 'e_rainbow', name: '🌈 Dúhová stopa', price: 7200, icon: '🌈' },
+            { id: 'e_god', name: '🌠 Vesmírna legenda', price: 8500, icon: '🌠' }
         ];
 
         let state = {
@@ -1599,7 +1618,7 @@
             }
         };
 
-        // Zoznam 20 úspechov (od jednoduchých po ťažké)
+        // Zoznam 26 úspechov (od jednoduchých po ťažké)
         const ACHIEVEMENTS_DEF = [
     // 🟢 Jednoduché (odmena 30 - 50 kreditov)
     { id: 'first_mission', title: 'Prvá misia', desc: 'Dokonči svoju prvú misiu', reward: 30, icon: '🎯' },
