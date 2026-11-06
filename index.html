@@ -181,7 +181,7 @@
             </div>
         </div>
 
-        <!-- 4. HERNÁ OBRAZOVKA (TAJNÉ NÁPOVEDY) -->
+        <!-- 4. HERNÁ OBRAZOVKA (ČASOVAČ & TAJNÉ NÁPOVEDY) -->
         <div id="screenGame" class="relative z-10 flex flex-col flex-1 hidden py-2">
             <div class="flex items-center justify-between bg-slate-800/50 border border-indigo-500/30 p-3 rounded-2xl mb-3 text-xs sm:text-sm">
                 <div class="flex items-center gap-3">
@@ -189,6 +189,7 @@
                     <span class="bg-indigo-950 px-2.5 py-1 rounded-xl text-slate-300 border border-indigo-500/30 font-bold">Otázka <span id="questionIndex">1</span>/10</span>
                 </div>
                 <div class="flex items-center gap-4">
+                    <span class="text-cyan-400 font-extrabold"><i class="fa-solid fa-clock mr-1"></i> <span id="questionTimer">15</span>s</span>
                     <span class="text-yellow-400 font-extrabold"><i class="fa-solid fa-star mr-1"></i> <span id="currentScore">0</span> b.</span>
                     <span class="text-red-400 font-extrabold"><i class="fa-solid fa-heart mr-1"></i> <span id="playerLives">3</span></span>
                 </div>
@@ -392,6 +393,8 @@
             questionsList: [],
             currentIndex: 0,
             currentHintsLevel: 0,
+            timerInterval: null,
+            timeLeft: 15,
             selectedFrameId: localStorage.getItem('vd_frameId') || 'f_none',
             selectedAvatarVal: localStorage.getItem('vd_avatarVal') || '👨‍🚀',
             selectedEffectId: localStorage.getItem('vd_effectId') || 'e_none',
@@ -436,7 +439,7 @@
                     { q: "Aká rieka preteká hlavným mestom?", h: ["Je to naša najznámejšia a najväčšia rieka.", "Tečie aj cez Viedeň či Budapešť."], a: ["Dunaj", "Váh", "Hron", "Nitra"], correct: 0 },
                     { q: "Aké pohorie je najvyššie na Slovensku?", h: ["Nachádzajú sa tu štíty ako Gerlach.", "Majú vysokohorský ráz."], a: ["Vysoké Tatry", "Nízke Tatry", "Matúšovo", "Malá Fatra"], correct: 0 },
                     { q: "Ktorý štát susedí so Slovenskom na severe?", h: ["Naši severní susedia.", "Hlavné mesto je Varšava."], a: ["Poľsko", "Rakúsko", "Maďarsko", "Ukrajina"], correct: 0 },
-                    { q: "Akú menu používa Slovensko?", h: ["Platíme ňou v obchodoch.", "Sú to mince a bankovky s eurom."], a: ["Euro (€)", "Koruna (Kč)", "Dolár ($)", "Forint"], correct: 0 },
+                    { q: "Akú menu používava Slovensko?", h: ["Platíme ňou v obchodoch.", "Sú to mince a bankovky s eurom."], a: ["Euro (€)", "Koruna (Kč)", "Dolár ($)", "Forint"], correct: 0 },
                     { q: "V ktorej krajine leží naše hlavné mesto Bratislava?", h: ["V našej rodnej vlasti.", "Má tvar pripomínajúci mostík."], a: ["Slovensko", "Česko", "Rakúsko", "Poľsko"], correct: 0 },
                     { q: "Aký symbol sa nachádza v strede slovenskej vlajky?", h: ["Je to náš štátny symbol.", "Obsahuje dvojkríž na trojvrší."], a: ["Štátny znak", "Hviezda", "Slnko", "Lvi"], correct: 0 }
                 ],
@@ -470,7 +473,7 @@
                     { q: "Čo nás cez deň hreje a svieti na oblohe?", h: ["Je to obrovská hviezda v centre sústavy.", "Dáva život na Zemi."], a: ["Slnko", "Mesiac", "Blesk", "Lampa"], correct: 0 },
                     { q: "Aká voda je v mrazničke?", h: ["Je premenená na ľad.", "Nezostáva v kvapalnom stave."], a: ["Ľad (Pevná)", "Voda", "Para", "Malinovka"], correct: 0 },
                     { q: "Čo spôsobuje hrom pri búrke?", h: ["Je to zvukový sprievod blesku.", "Vzniká silným výbojom v atmosfére."], a: ["Elektrický výboj / Zvuk", "Vietor", "Sneh", "Dážď"], correct: 0 },
-                    { q: "Ktoré teleso obieha okolo našej Zemin?", h: ["Je to náš prirodzený satelit.", "Vidíme ho v noci v rôznych fázach."], a: ["Mesiac", "Slnko", "Mars", "Venuša"], correct: 0 },
+                    { q: "Ktoré teleso obieha okolo našej Zemi?", h: ["Je to náš prirodzený satelit.", "Vidíme ho v noci v rôznych fázach."], a: ["Mesiac", "Slnko", "Mars", "Venuša"], correct: 0 },
                     { q: "Aké svetlo dostávame zo Slnka?", h: ["Dáva nám jas a teplo.", "Bez neho by bola tma a chlad."], a: ["Svetlo a teplo", "Chlad a tmu", "Zvuk", "Vodu"], correct: 0 },
                     { q: "Čo sa stane s cukrom v horúcom čaji?", h: ["Úplne sa v ňom stratí.", "Tekutina zostane sladká."], a: ["Rozpustí sa", "Zostane v celku", "Zhorí", "Zarastie"], correct: 0 },
                     { q: "Aký pohyb robí loptička, keď ju pustíš z ruky?", h: ["Pritiahne ju zem.", "Nepadá hore, ale..."], a: ["Padá nadol", "Letí do vesmíru", "Stojí vo vzduchu", "Otáča sa do bokov"], correct: 0 },
@@ -744,6 +747,7 @@
         }
 
         function backToMenu() {
+            if (state.timerInterval) clearInterval(state.timerInterval);
             showScreen('screenMenu');
             updateUI();
         }
@@ -774,8 +778,34 @@
             loadQuestion();
         }
 
+        function startQuestionTimer() {
+            if (state.timerInterval) clearInterval(state.timerInterval);
+            state.timeLeft = 15;
+            document.getElementById('questionTimer').innerText = state.timeLeft;
+
+            state.timerInterval = setInterval(() => {
+                state.timeLeft--;
+                document.getElementById('questionTimer').innerText = state.timeLeft;
+                if (state.timeLeft <= 0) {
+                    clearInterval(state.timerInterval);
+                    // Čas vypršal -> považuje sa za nesprávnu odpoveď
+                    playSound('wrong');
+                    const buttons = document.getElementById('answersGrid').querySelectorAll('button');
+                    buttons.forEach(b => b.disabled = true);
+                    state.lives--;
+                    document.getElementById('playerLives').innerText = state.lives;
+
+                    setTimeout(() => {
+                        state.currentIndex++;
+                        loadQuestion();
+                    }, 1200);
+                }
+            }, 1000);
+        }
+
         function loadQuestion() {
             if (state.currentIndex >= state.questionsList.length || state.lives <= 0) {
+                if (state.timerInterval) clearInterval(state.timerInterval);
                 finishGame();
                 return;
             }
@@ -787,6 +817,7 @@
 
             state.currentHintsLevel = 0;
             updateHintDisplay();
+            startQuestionTimer();
 
             document.getElementById('questionText').innerText = qData.q;
 
@@ -842,6 +873,8 @@
         }
 
         function checkAnswer(isCorrect, btnElement) {
+            if (state.timerInterval) clearInterval(state.timerInterval);
+
             const buttons = document.getElementById('answersGrid').querySelectorAll('button');
             buttons.forEach(b => b.disabled = true);
 
@@ -849,7 +882,10 @@
                 playSound('correct');
                 btnElement.classList.remove('bg-slate-800/80', 'border-indigo-500/30');
                 btnElement.classList.add('bg-emerald-600/40', 'border-emerald-400', 'text-emerald-200');
-                state.score += 20;
+                
+                // Základné body (20) + Časový bonus (zostávajúce sekundy * 2)
+                const timeBonus = state.timeLeft * 2;
+                state.score += (20 + timeBonus);
             } else {
                 playSound('wrong');
                 btnElement.classList.remove('bg-slate-800/80', 'border-indigo-500/30');
@@ -868,6 +904,7 @@
 
         // Vyhodnotenie úspechov a konca misie
         async function finishGame() {
+            if (state.timerInterval) clearInterval(state.timerInterval);
             showScreen('screenResult');
             
             state.missionsCompleted++;
@@ -922,7 +959,7 @@
             updateUI();
             saveUserDataToCloud(state.userId);
 
-            document.getElementById('resScore').innerText = `+${earnedCoins + newlyUnlockedCoins} kreditov (${state.score} bodov)`;
+            document.getElementById('resScore').innerText = `+${earnedCoins + newlyUnlockedCoins} kreditov (${state.score} bodov v tejto misii)`;
             
             const noticeEl = document.getElementById('resAchNotice');
             if (achUnlockedCount > 0) {
@@ -932,15 +969,20 @@
                 noticeEl.classList.add('hidden');
             }
 
+            // Uloženie/Pripočítanie skóre do rebríčka (1 hráč = 1 riadok vo Firestore)
             try {
-                await db.collection("rebricek").add({
+                const docId = state.userId || state.userName.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+                const activeFrame = FRAMES_DATABASE.find(f => f.id === state.selectedFrameId) || FRAMES_DATABASE[0];
+                const activeEffect = EFFECTS_DATABASE.find(e => e.id === state.selectedEffectId) || EFFECTS_DATABASE[0];
+
+                await db.collection("rebricek").doc(docId).set({
                     name: state.userName,
-                    score: state.score,
+                    score: firebase.firestore.FieldValue.increment(state.score),
                     avatar: state.selectedAvatarVal,
-                    frameStyle: (FRAMES_DATABASE.find(f => f.id === state.selectedFrameId) || FRAMES_DATABASE[0]).style,
-                    effectIcon: (EFFECTS_DATABASE.find(e => e.id === state.selectedEffectId) || EFFECTS_DATABASE[0]).icon,
+                    frameStyle: activeFrame.style,
+                    effectIcon: activeEffect.icon,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                }, { merge: true });
             } catch (e) {
                 console.error(e);
             }
