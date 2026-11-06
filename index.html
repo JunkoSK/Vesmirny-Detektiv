@@ -417,7 +417,7 @@
             currentIndex: 0,
             currentHintsLevel: 0,
             timerInterval: null,
-            timeLeft: 15,
+            timeLeft: 30,
             selectedFrameId: localStorage.getItem('vd_frameId') || 'f_none',
             selectedAvatarVal: localStorage.getItem('vd_avatarVal') || '👨‍🚀',
             selectedEffectId: localStorage.getItem('vd_effectId') || 'e_none',
@@ -1859,7 +1859,7 @@
 
         function startQuestionTimer() {
             if (state.timerInterval) clearInterval(state.timerInterval);
-            state.timeLeft = 15;
+            state.timeLeft = 30;
             document.getElementById('questionTimer').innerText = state.timeLeft;
 
             state.timerInterval = setInterval(() => {
@@ -1939,7 +1939,7 @@
         }
 
         function revealNextHint() {
-            const cost = state.currentHintsLevel === 0 ? 5 : 8;
+            const cost = state.currentHintsLevel === 0 ? 10 : 10;
             if (state.score >= cost) {
                 state.score -= cost;
                 document.getElementById('currentScore').innerText = state.score;
